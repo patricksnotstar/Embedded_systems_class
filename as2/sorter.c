@@ -49,12 +49,6 @@ int main(int argc, char *argv[])
 
     // // repeatedly call bubble sort on random arrays, with sizes read from POT
     // // stop sorting once UDP socket gets stop command
-    // long seconds = 0;
-    // long nanoseconds = 100000000;
-    // struct timespec reqDelay = {seconds, nanoseconds};
-    // nanosleep(&reqDelay, (struct timespec *)NULL);
-    // int num = Sorter_getNumberArraysSorted();
-    // printf("Arrays sorted %d \n", num);
 
     while (true)
     {
