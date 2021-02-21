@@ -5,49 +5,208 @@
 #include <pthread.h>
 
 #include "sorter.h"
+#include "pothead.h"
 
 #define DEFAULT 100
 #define numArr 5
 
-static struct sortedAnswer
+struct sortedAnswer
 {
+    pthread_t tid;
     int *arr;
+    int arrSize;
+    int nextSize;
+    pthread_mutex_t arrMutex;
+    pthread_mutex_t arrSizeMutex;
+    int sortedCount;
+    bool keepSorting;
 };
+static struct sortedAnswer answer;
+static void swap(int *i, int *j);
 
-void *bubbleSort(void *arr, int n);
+void *bubbleSort(void *ans);
 
 int main(int argc, char *argv[])
 {
-    int *arr = malloc(DEFAULT * sizeof(int));
-    time_t t;
-    srand((unsigned)time(&t));
-    for (int i = 0; i < DEFAULT; i++)
+
+    if (pthread_mutex_init(&answer.arrMutex, NULL) != 0)
     {
-        arr[i] = rand() % DEFAULT;
+        printf("Mutex initialization failed\n");
+        return 1;
     }
 
-    struct sortedAnswer ans[numArr];
+    if (pthread_mutex_init(&answer.arrSizeMutex, NULL) != 0)
+    {
+        printf("Mutex initialization failed\n");
+        return 1;
+    }
+    answer.nextSize = -1;
+    answer.sortedCount = 0;
+    answer.keepSorting = false;
 
-    bubbleSort(arr, DEFAULT);
-    free(arr);
-    arr = NULL;
+    // starts sorting thread
+    Sorter_startSorting();
+
+    // // repeatedly call bubble sort on random arrays, with sizes read from POT
+    // // stop sorting once UDP socket gets stop command
+    // long seconds = 0;
+    // long nanoseconds = 100000000;
+    // struct timespec reqDelay = {seconds, nanoseconds};
+    // nanosleep(&reqDelay, (struct timespec *)NULL);
+    // int num = Sorter_getNumberArraysSorted();
+    // printf("Arrays sorted %d \n", num);
+
+    while (true)
+    {
+        long seconds = 1;
+        long nanoseconds = 0;
+        struct timespec reqDelay = {seconds, nanoseconds};
+        nanosleep(&reqDelay, (struct timespec *)NULL);
+
+        int a2d = Pothead_getVoltage0Reading();
+
+        int size = Pothead_calcArraySize(a2d);
+        Sorter_setArraySize(size);
+    }
+
+    Sorter_stopSorting();
+
     return 0;
 }
 
-void *bubbleSort(void *arr, int n)
+void Sorter_startSorting(void)
 {
-    int *array = arr;
-    for (int i = 0; i < n - 1; i++)
+    pthread_t tid;
+    pthread_mutex_lock(&answer.arrMutex);
     {
-        for (int j = 0; j < n - i - 1; j++)
+        answer.keepSorting = true;
+    }
+    pthread_mutex_unlock(&answer.arrMutex);
+    pthread_create(&tid, NULL, &bubbleSort, &answer);
+    answer.tid = tid;
+}
+
+void Sorter_stopSorting(void)
+{
+    pthread_mutex_lock(&answer.arrMutex);
+    {
+        answer.keepSorting = false;
+    }
+    pthread_mutex_unlock(&answer.arrMutex);
+    pthread_join(answer.tid, NULL);
+    free(answer.arr);
+    answer.arr = NULL;
+}
+
+void *bubbleSort(void *ans)
+{
+    struct sortedAnswer *answer = ans;
+    while (true)
+    {
+
+        pthread_mutex_lock(&answer->arrSizeMutex);
         {
-            if (array[j] > array[j + 1])
+            if (answer->nextSize != -1)
             {
-                int temp = array[j];
-                array[j] = array[j + 1];
-                array[j + 1] = temp;
+                answer->arrSize = answer->nextSize;
+            }
+            else
+            {
+                answer->arrSize = DEFAULT;
+            }
+            printf("Sorting array of size: %d\n", answer->arrSize);
+        }
+        pthread_mutex_unlock(&answer->arrSizeMutex);
+
+        answer->arr = malloc(answer->arrSize * sizeof(int));
+
+        time_t t;
+        srand((unsigned)time(&t));
+        for (int i = 0; i < answer->arrSize; i++)
+        {
+            answer->arr[i] = i;
+        }
+
+        for (int i = 0; i < answer->arrSize; i++)
+        {
+            int randIdx = rand() % answer->arrSize;
+            swap(&answer->arr[i], &answer->arr[randIdx]);
+        }
+
+        for (int i = 0; i < answer->arrSize - 1; i++)
+        {
+            for (int j = 0; j < answer->arrSize - i - 1; j++)
+            {
+                if (answer->arr[j] > answer->arr[j + 1])
+                {
+                    pthread_mutex_lock(&answer->arrMutex);
+                    {
+                        swap(&answer->arr[j], &answer->arr[j + 1]);
+                        if (answer->keepSorting == false)
+                        {
+                            pthread_mutex_unlock(&answer->arrMutex);
+                            pthread_exit(0);
+                        }
+                    }
+                    pthread_mutex_unlock(&answer->arrMutex);
+                }
             }
         }
+
+        answer->sortedCount++;
     }
-    return 0;
+}
+
+static void swap(int *i, int *j)
+{
+    int temp = *i;
+    *i = *j;
+    *j = temp;
+}
+
+void Sorter_setArraySize(int newSize)
+{
+    pthread_mutex_lock(&answer.arrSizeMutex);
+    {
+        answer.nextSize = newSize;
+    }
+    pthread_mutex_unlock(&answer.arrSizeMutex);
+}
+
+int Sorter_getArrayLength(void)
+{
+    int size;
+    pthread_mutex_lock(&answer.arrSizeMutex);
+    {
+        size = answer.arrSize;
+    }
+    pthread_mutex_unlock(&answer.arrSizeMutex);
+    return size;
+}
+
+// Get a copy of the current (potentially partially sorted) array.
+// Returns a newly allocated array and sets 'length' to be the
+// number of elements in the returned array (output-only parameter).
+// The calling code must call free() on the returned pointer.
+int *Sorter_getArrayData(int *length)
+{
+    int *copy;
+    copy = malloc(sizeof(int) * answer.arrSize);
+    *length = answer.arrSize;
+
+    pthread_mutex_lock(&answer.arrMutex);
+    {
+        for (int i = 0; i < answer.arrSize; i++)
+        {
+            copy[i] = answer.arr[i];
+        }
+    }
+    pthread_mutex_unlock(&answer.arrMutex);
+
+    return copy;
+}
+
+long long Sorter_getNumberArraysSorted(void)
+{
+    return answer.sortedCount;
 }

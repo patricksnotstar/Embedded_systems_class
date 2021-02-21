@@ -16,7 +16,7 @@ help:
 
 
 app:
-	$(CC_C) $(CFLAGS) sorter.c -o $(OUTDIR)/$(OUTFILE)
+	$(CC_C) $(CFLAGS) sorter.c pothead.c networking.c -o $(OUTDIR)/$(OUTFILE)
 	ls -l $(OUTDIR)/$(OUTFILE)
 
 done: 
