@@ -28,27 +28,30 @@
 #define LEFT_DIGIT "/sys/class/gpio/gpio61/value"
 #define RIGHT_DIGIT "/sys/class/gpio/gpio44/value"
 
-static void changeState(char *digit, char *state);
-static int initI2cBus(char *bus, int address);
-static void writeI2cReg(int i2cFileDesc, unsigned char regAddr, unsigned char value);
-static void writeDigit(int i2cFile, int num);
-// static void writeNumber(int i2cFileDesc, int num);
-static unsigned char readI2cReg(int i2cFileDesc, unsigned char regAddr);
-static void shutDownI2C(int i2cFileDesc);
+// static void changeState(char *digit, char *state);
+// static int initI2cBus(char *bus, int address);
+// static void writeI2cReg(int i2cFileDesc, unsigned char regAddr, unsigned char value);
+// static void writeDigit(int i2cFile, int num);
+// // static void writeNumber(int i2cFileDesc, int num);
+// static unsigned char readI2cReg(int i2cFileDesc, unsigned char regAddr);
+// static void shutDownI2C(int i2cFileDesc);
 
-
-static void writeToFile(const char* fileName, const char* value)
+static void writeToFile(const char *fileName, const char *value)
 {
-	FILE *pFile = fopen(fileName, "w");
-     if (pFile == NULL) {
+    FILE *pFile = fopen(fileName, "w");
+    if (pFile == NULL)
+    {
         fprintf(stderr, "Unable to open path for writing\n");
         exit(-1);
     }
-	fprintf(pFile, "%s", value);
-	fclose(pFile);
+    fprintf(pFile, "%s", value);
+    fclose(pFile);
 }
 
-static void configureI2C(int i2cFileDesc){
+void configureI2C(int i2cFileDesc)
+{
+
+    i2cFileDesc = initI2cBus(I2CDRV_LINUX_BUS1, I2C_DEVICE_ADDRESS);
 
     system("config-pin P9_17 i2c");
     system("config-pin P9_18 i2c");
@@ -72,10 +75,10 @@ static void configureI2C(int i2cFileDesc){
 
     changeState(LEFT_DIGIT, "0");
     changeState(RIGHT_DIGIT, "0");
-
 }
 
-void shutDownI2C(int i2cFileDesc) {
+void shutDownI2C(int i2cFileDesc)
+{
 
     changeState(LEFT_DIGIT, "0");
     changeState(RIGHT_DIGIT, "0");
@@ -95,15 +98,12 @@ static void changeState(char *digit, char *state)
     fclose(f);
 }
 
-
 // int main()
 // {
 //     // printf("Drive display (assumes GPIO #61 and #44 are output and 1\n");
 //     int i2cFileDesc = initI2cBus(I2CDRV_LINUX_BUS1, I2C_DEVICE_ADDRESS);
-    
 
 //     configureI2C(i2cFileDesc);
-
 
 //     for(int i=0; i<200; i++){
 //         Seg_writeNumber(i2cFileDesc, 69);
@@ -114,9 +114,9 @@ static void changeState(char *digit, char *state)
 //         // nanosleep(&reqDelay, (struct timespec *)NULL);
 
 //     }
-    
+
 //     shutDownI2C(i2cFileDesc);
-    
+
 //     return 0;
 // }
 
@@ -145,22 +145,25 @@ static void writeI2cReg(int i2cFileDesc, unsigned char regAddr, unsigned char va
     }
 }
 
-static unsigned char readI2cReg(int i2cFileDesc, unsigned char regAddr){
+static unsigned char readI2cReg(int i2cFileDesc, unsigned char regAddr)
+{
     // To read a register, must first write the address
     int res = write(i2cFileDesc, &regAddr, sizeof(regAddr));
 
-    if (res != sizeof(regAddr)) {
+    if (res != sizeof(regAddr))
+    {
         perror("I2C: Unable to write to i2c register.");
         exit(1);
-        }
-        // Now read the value and return it
-        char value = 0;
-        res = read(i2cFileDesc, &value, sizeof(value));
-        if (res != sizeof(value)) {
-            perror("I2C: Unable to read from i2c register");
-            exit(1);
-            }
-            return value;
+    }
+    // Now read the value and return it
+    char value = 0;
+    res = read(i2cFileDesc, &value, sizeof(value));
+    if (res != sizeof(value))
+    {
+        perror("I2C: Unable to read from i2c register");
+        exit(1);
+    }
+    return value;
 }
 
 static void writeDigit(int i2cFile, int num)
@@ -210,16 +213,17 @@ static void writeDigit(int i2cFile, int num)
     }
 }
 
-
 void Seg_writeNumber(int i2cFileDesc, int num)
 {
     int tens;
     int ones;
-    if (num > 99) {
+    if (num > 99)
+    {
         tens = 9;
         ones = 9;
     }
-    else {
+    else
+    {
         tens = num / 10; // get first digit of number
         ones = num % 10; // get second digit of number
     }
@@ -234,7 +238,7 @@ void Seg_writeNumber(int i2cFileDesc, int num)
     // write to left and turn on, then sleep
     writeDigit(i2cFileDesc, tens);
     changeState(LEFT_DIGIT, "1");
-    
+
     nanosleep(&reqDelay, (struct timespec *)NULL);
     //turn off left
     changeState(LEFT_DIGIT, "0");

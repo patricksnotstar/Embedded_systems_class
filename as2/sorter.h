@@ -20,5 +20,6 @@ int Sorter_getArrayLength(void);
 char *Sorter_getArrayData(int *length);
 // Get the number of arrays which have finished being sorted.
 long long Sorter_getNumberArraysSorted(void);
+// void *networkHandler(void);
 
 #endif

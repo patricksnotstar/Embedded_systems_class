@@ -5,9 +5,13 @@
 #include <pthread.h>
 #include <string.h>
 #include <ctype.h>
+#include <netdb.h>
+#include <unistd.h> // for close()
 
 #include "sorter.h"
+#include "littyDaSeggy.h"
 #include "pothead.h"
+#include "networking.h"
 
 #define DEFAULT 100
 #define numArr 5
@@ -23,11 +27,15 @@ struct sortedAnswer
     int sortedCount;
     bool keepSorting;
 };
+
 static struct sortedAnswer answer;
 static void swap(int *i, int *j);
 static int Sorter_readUserInput(char *input, char *output);
-
+static bool networkRunning;
+pthread_mutex_t network;
+static pthread_t networkId;
 void *bubbleSort(void *ans);
+void *networkHandler(void);
 
 int main(int argc, char *argv[])
 {
@@ -43,12 +51,30 @@ int main(int argc, char *argv[])
         printf("Mutex initialization failed\n");
         return 1;
     }
+
+    if (pthread_mutex_init(&network, NULL) != 0)
+    {
+        printf("Mutex initialization failed\n");
+        return 1;
+    }
     answer.nextSize = -1;
     answer.sortedCount = 0;
     answer.keepSorting = false;
 
+    Networking_configNetwork();
+    configureI2C(i2cFileDesc);
+    pthread_create(&networkId, NULL, *networkHandler, NULL);
     // starts sorting thread
     Sorter_startSorting();
+
+    // create while loop that keeps going until stop command is reached
+    // need to trigger some global variable or mutex to signal that we need to break loop
+
+    // trigger shutdown operations after while loop is done
+
+    Sorter_stopSorting();
+    Networking_shutDownNetwork();
+    shutDownI2C(i2cFileDesc);
 
     // // repeatedly call bubble sort on random arrays, with sizes read from POT
     // // stop sorting once UDP socket gets stop command
@@ -65,14 +91,6 @@ int main(int argc, char *argv[])
     //     int size = Pothead_calcArraySize(a2d);
     //     Sorter_setArraySize(size);
     // }
-
-    char str[10];
-    char out[1000000];
-    fgets(str, 9, stdin);
-    str[10] = '\0';
-    Sorter_readUserInput(str, out);
-    printf("%s", "test\n");
-    Sorter_stopSorting();
 
     return 0;
 }
@@ -281,7 +299,7 @@ static int Sorter_readUserInput(char *input, char *output)
 
         int *len;
         char *arr = Sorter_getArrayData(len);
-        if (val > *len)
+        if (val > *len || val < 0)
         {
             output = "Value is out of bounds for the current array being sorted. Try again.\n";
         }
@@ -297,4 +315,38 @@ static int Sorter_readUserInput(char *input, char *output)
     }
 
     return -1;
+}
+
+void *networkHandler(void)
+{ //needs to continually send and recieve packets until thread is shutdown
+    bool running;
+    pthread_mutex_lock(&network);
+    {
+        running = networkRunning;
+    }
+    pthread_mutex_unlock(&network);
+
+    while (running)
+    {
+        char messageRx[MSG_MAX_LEN];
+        memset(messageRx, 0, sizeof(messageRx));
+        unsigned int sin_len = sizeof(client);
+        int bytesRx = recvfrom(socketDescriptor,
+                               messageRx, MSG_MAX_LEN, 0,
+                               (struct sockaddr *)&client, &sin_len);
+
+        // Make it null terminated
+        int terminateIdx = (bytesRx < MSG_MAX_LEN) ? bytesRx : MSG_MAX_LEN - 1;
+        messageRx[terminateIdx] = 0;
+
+        char outResponse[MSG_MAX_LEN];
+        Sorter_readUserInput(messageRx, outResponse);
+
+        Networking_sendPacket(outResponse);
+        pthread_mutex_lock(&network);
+        {
+            running = networkRunning;
+        }
+        pthread_mutex_unlock(&network);
+    }
 }
