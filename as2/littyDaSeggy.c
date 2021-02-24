@@ -13,10 +13,6 @@
 #include "pothead.h"
 #include "littyDaSeggy.h"
 
-// Assume pins already configured for I2C:
-//   (bbg)$ config-pin P9_18 i2c
-//   (bbg)$ config-pin P9_17 i2c
-
 #define I2C_DEVICE_ADDRESS 0x20
 #define I2CDRV_LINUX_BUS0 "/dev/i2c-0"
 #define I2CDRV_LINUX_BUS1 "/dev/i2c-1"
@@ -26,8 +22,65 @@
 #define REG_OUTA 0x14
 #define REG_OUTB 0x15
 
+#define EXPORT "/sys/class/gpio/export"
+#define LEFT_DIRECTION "/sys/class/gpio/gpio61/direction"
+#define RIGHT_DIRECTION "/sys/class/gpio/gpio44/direction"
 #define LEFT_DIGIT "/sys/class/gpio/gpio61/value"
 #define RIGHT_DIGIT "/sys/class/gpio/gpio44/value"
+
+static void changeState(char *digit, char *state);
+static int initI2cBus(char *bus, int address);
+static void writeI2cReg(int i2cFileDesc, unsigned char regAddr, unsigned char value);
+static void writeDigit(int i2cFile, int num);
+// static void writeNumber(int i2cFileDesc, int num);
+static unsigned char readI2cReg(int i2cFileDesc, unsigned char regAddr);
+static void shutDownI2C(int i2cFileDesc);
+
+
+static void writeToFile(const char* fileName, const char* value)
+{
+	FILE *pFile = fopen(fileName, "w");
+     if (pFile == NULL) {
+        fprintf(stderr, "Unable to open path for writing\n");
+        exit(-1);
+    }
+	fprintf(pFile, "%s", value);
+	fclose(pFile);
+}
+
+static void configureI2C(int i2cFileDesc){
+
+    system("config-pin P9_17 i2c");
+    system("config-pin P9_18 i2c");
+
+    writeToFile(EXPORT, "61");
+
+    long seconds = 0;
+    long nanoseconds = 30000000;
+    struct timespec reqDelay = {seconds, nanoseconds};
+    nanosleep(&reqDelay, (struct timespec *)NULL);
+
+    writeToFile(EXPORT, "44");
+
+    nanosleep(&reqDelay, (struct timespec *)NULL);
+
+    writeToFile(LEFT_DIRECTION, "out");
+    writeToFile(RIGHT_DIRECTION, "out");
+
+    writeI2cReg(i2cFileDesc, REG_DIRA, 0x00);
+    writeI2cReg(i2cFileDesc, REG_DIRB, 0x00);
+
+    changeState(LEFT_DIGIT, "0");
+    changeState(RIGHT_DIGIT, "0");
+
+}
+
+void shutDownI2C(int i2cFileDesc) {
+
+    changeState(LEFT_DIGIT, "0");
+    changeState(RIGHT_DIGIT, "0");
+    close(i2cFileDesc);
+}
 
 // turns the right digit on or off
 static void changeState(char *digit, char *state)
@@ -38,43 +91,34 @@ static void changeState(char *digit, char *state)
         printf("ERROR: Unable to open %s.\n", digit);
         exit(-1);
     }
-    int charWritten = fprintf(f, state);
-    if (charWritten <= 0)
-    {
-        printf("ERROR WRITING DATA");
-        exit(1);
-    }
+    fprintf(f, "%s", state);
     fclose(f);
 }
 
-int main()
-{
-    // printf("Drive display (assumes GPIO #61 and #44 are output and 1\n");
-    int i2cFileDesc = initI2cBus(I2CDRV_LINUX_BUS1, I2C_DEVICE_ADDRESS);
-    writeI2cReg(i2cFileDesc, REG_DIRA, 0x00);
-    writeI2cReg(i2cFileDesc, REG_DIRB, 0x00);
-    // Drive an hour-glass looking character
-    // (Like an X with a bar on top & bottom)
-    // writeI2cReg(i2cFileDesc, REG_OUTA, 0x2A);
-    // writeI2cReg(i2cFileDesc, REG_OUTB, 0x54);
 
-    while (true)
-    {
-        changeState(LEFT_DIGIT, "0");
-        changeState(RIGHT_DIGIT, "1");
-        writeNumber(i2cFileDesc, 9);
-        changeState(RIGHT_DIGIT, "0");
-        changeState(LEFT_DIGIT, "1");
-        writeNumber(i2cFileDesc, 6);
-    }
+// int main()
+// {
+//     // printf("Drive display (assumes GPIO #61 and #44 are output and 1\n");
+//     int i2cFileDesc = initI2cBus(I2CDRV_LINUX_BUS1, I2C_DEVICE_ADDRESS);
+    
 
-    // Read a register:
-    unsigned char regVal = readI2cReg(i2cFileDesc, REG_OUTA);
-    printf("Reg OUT-A = 0x%02x\n", regVal);
-    // Cleanup I2C access;
-    close(i2cFileDesc);
-    return 0;
-}
+//     configureI2C(i2cFileDesc);
+
+
+//     for(int i=0; i<200; i++){
+//         Seg_writeNumber(i2cFileDesc, 69);
+
+//         // long seconds = 0;
+//         // long nanoseconds = 50000000;
+//         // struct timespec reqDelay = {seconds, nanoseconds};
+//         // nanosleep(&reqDelay, (struct timespec *)NULL);
+
+//     }
+    
+//     shutDownI2C(i2cFileDesc);
+    
+//     return 0;
+// }
 
 static int initI2cBus(char *bus, int address)
 {
@@ -101,7 +145,25 @@ static void writeI2cReg(int i2cFileDesc, unsigned char regAddr, unsigned char va
     }
 }
 
-static void writeNumber(int i2cFile, int num)
+static unsigned char readI2cReg(int i2cFileDesc, unsigned char regAddr){
+    // To read a register, must first write the address
+    int res = write(i2cFileDesc, &regAddr, sizeof(regAddr));
+
+    if (res != sizeof(regAddr)) {
+        perror("I2C: Unable to write to i2c register.");
+        exit(1);
+        }
+        // Now read the value and return it
+        char value = 0;
+        res = read(i2cFileDesc, &value, sizeof(value));
+        if (res != sizeof(value)) {
+            perror("I2C: Unable to read from i2c register");
+            exit(1);
+            }
+            return value;
+}
+
+static void writeDigit(int i2cFile, int num)
 {
     switch (num)
     {
@@ -146,4 +208,40 @@ static void writeNumber(int i2cFile, int num)
         writeI2cReg(i2cFile, REG_OUTB, 0x8e);
         break;
     }
+}
+
+
+void Seg_writeNumber(int i2cFileDesc, int num)
+{
+    int tens;
+    int ones;
+    if (num > 99) {
+        tens = 9;
+        ones = 9;
+    }
+    else {
+        tens = num / 10; // get first digit of number
+        ones = num % 10; // get second digit of number
+    }
+
+    long seconds = 0;
+    long nanoseconds = 10000000;
+    struct timespec reqDelay = {seconds, nanoseconds};
+    // turn both numbers of display off
+    changeState(LEFT_DIGIT, "0");
+    changeState(RIGHT_DIGIT, "0");
+
+    // write to left and turn on, then sleep
+    writeDigit(i2cFileDesc, tens);
+    changeState(LEFT_DIGIT, "1");
+    
+    nanosleep(&reqDelay, (struct timespec *)NULL);
+    //turn off left
+    changeState(LEFT_DIGIT, "0");
+
+    // write to right and turn on, then sleep
+    writeDigit(i2cFileDesc, ones);
+    changeState(RIGHT_DIGIT, "1");
+
+    nanosleep(&reqDelay, (struct timespec *)NULL);
 }
