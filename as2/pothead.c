@@ -31,7 +31,6 @@ int Pothead_calcArraySize(int A2Dinput)
     {
         if (A2Dinput == PIECEWISE_A2D[i])
         {
-            printf("match\n");
             return PIECEWISE_SIZE[i];
         }
         else if (A2Dinput > PIECEWISE_A2D[i] && A2Dinput < PIECEWISE_A2D[i + 1])

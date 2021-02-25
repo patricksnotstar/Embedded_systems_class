@@ -17,7 +17,7 @@ int Sorter_getArrayLength(void);
 // Returns a newly allocated array and sets 'length' to be the
 // number of elements in the returned array (output-only parameter).
 // The calling code must call free() on the returned pointer.
-char *Sorter_getArrayData(int *length);
+char *Sorter_getArrayData();
 // Get the number of arrays which have finished being sorted.
 long long Sorter_getNumberArraysSorted(void);
 // void *networkHandler(void);

@@ -31,7 +31,7 @@
 static void changeState(char *digit, char *state);
 static int initI2cBus(char *bus, int address);
 static void writeI2cReg(int i2cFileDesc, unsigned char regAddr, unsigned char value);
-static void writeDigit(int i2cFile, int num);
+// static void writeDigit(int i2cFile, long long num);
 // static void writeNumber(int i2cFileDesc, int num);
 // static unsigned char readI2cReg(int i2cFileDesc, unsigned char regAddr);
 
@@ -94,30 +94,9 @@ static void changeState(char *digit, char *state)
         exit(-1);
     }
     fprintf(f, "%s", state);
+
     fclose(f);
 }
-
-// int main()
-// {
-//     // printf("Drive display (assumes GPIO #61 and #44 are output and 1\n");
-//     int i2cFileDesc = initI2cBus(I2CDRV_LINUX_BUS1, I2C_DEVICE_ADDRESS);
-
-//     configureI2C(i2cFileDesc);
-
-//     for(int i=0; i<200; i++){
-//         Seg_writeNumber(i2cFileDesc, 69);
-
-//         // long seconds = 0;
-//         // long nanoseconds = 50000000;
-//         // struct timespec reqDelay = {seconds, nanoseconds};
-//         // nanosleep(&reqDelay, (struct timespec *)NULL);
-
-//     }
-
-//     shutDownI2C(i2cFileDesc);
-
-//     return 0;
-// }
 
 static int initI2cBus(char *bus, int address)
 {
@@ -212,7 +191,7 @@ static void writeDigit(int i2cFile, int num)
     }
 }
 
-void Seg_writeNumber(int i2cFileDesc, int num)
+void Seg_writeNumber(int i2cFileDesc, long long num)
 {
     int tens;
     int ones;
@@ -227,6 +206,7 @@ void Seg_writeNumber(int i2cFileDesc, int num)
         ones = num % 10; // get second digit of number
     }
 
+    // printf("Writing %lld to i2c\n", num);
     long seconds = 0;
     long nanoseconds = 10000000;
     struct timespec reqDelay = {seconds, nanoseconds};

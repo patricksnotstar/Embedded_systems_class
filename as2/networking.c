@@ -62,5 +62,5 @@ void Networking_recievePacket(char *messageRx)
     // Make it null terminated (so string functions work):
     int terminateIdx = (bytesRx < MSG_MAX_LEN) ? bytesRx : MSG_MAX_LEN - 1;
     messageRx[terminateIdx] = 0;
-    printf("Message received (%d bytes): \n\n'%s'\n", bytesRx, messageRx);
+    // printf("Message received (%d bytes): \n\n'%s'\n", bytesRx, messageRx);
 }
