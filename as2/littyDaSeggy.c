@@ -28,13 +28,12 @@
 #define LEFT_DIGIT "/sys/class/gpio/gpio61/value"
 #define RIGHT_DIGIT "/sys/class/gpio/gpio44/value"
 
-// static void changeState(char *digit, char *state);
-// static int initI2cBus(char *bus, int address);
-// static void writeI2cReg(int i2cFileDesc, unsigned char regAddr, unsigned char value);
-// static void writeDigit(int i2cFile, int num);
-// // static void writeNumber(int i2cFileDesc, int num);
+static void changeState(char *digit, char *state);
+static int initI2cBus(char *bus, int address);
+static void writeI2cReg(int i2cFileDesc, unsigned char regAddr, unsigned char value);
+static void writeDigit(int i2cFile, int num);
+// static void writeNumber(int i2cFileDesc, int num);
 // static unsigned char readI2cReg(int i2cFileDesc, unsigned char regAddr);
-// static void shutDownI2C(int i2cFileDesc);
 
 static void writeToFile(const char *fileName, const char *value)
 {
@@ -145,26 +144,26 @@ static void writeI2cReg(int i2cFileDesc, unsigned char regAddr, unsigned char va
     }
 }
 
-static unsigned char readI2cReg(int i2cFileDesc, unsigned char regAddr)
-{
-    // To read a register, must first write the address
-    int res = write(i2cFileDesc, &regAddr, sizeof(regAddr));
+// static unsigned char readI2cReg(int i2cFileDesc, unsigned char regAddr)
+// {
+//     // To read a register, must first write the address
+//     int res = write(i2cFileDesc, &regAddr, sizeof(regAddr));
 
-    if (res != sizeof(regAddr))
-    {
-        perror("I2C: Unable to write to i2c register.");
-        exit(1);
-    }
-    // Now read the value and return it
-    char value = 0;
-    res = read(i2cFileDesc, &value, sizeof(value));
-    if (res != sizeof(value))
-    {
-        perror("I2C: Unable to read from i2c register");
-        exit(1);
-    }
-    return value;
-}
+//     if (res != sizeof(regAddr))
+//     {
+//         perror("I2C: Unable to write to i2c register.");
+//         exit(1);
+//     }
+//     // Now read the value and return it
+//     char value = 0;
+//     res = read(i2cFileDesc, &value, sizeof(value));
+//     if (res != sizeof(value))
+//     {
+//         perror("I2C: Unable to read from i2c register");
+//         exit(1);
+//     }
+//     return value;
+// }
 
 static void writeDigit(int i2cFile, int num)
 {

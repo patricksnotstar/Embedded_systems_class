@@ -38,22 +38,22 @@ void Networking_shutDownNetwork()
     close(socketDescriptor);
 }
 
-void Networking_sendPacket(char message)
+void Networking_sendPacket(char *messageTx)
 {
     // Transmit a reply:
     unsigned int sin_len = sizeof(client);
-    char messageTx[MSG_MAX_LEN];
-    memset(messageTx, 0, sizeof(messageTx));
+    // char messageTx[MSG_MAX_LEN];
+    // memset(messageTx, 0, sizeof(messageTx));
     // put message in messagTx
+    // sprintf(messageTx, "%s", message);
     sendto(socketDescriptor,
            messageTx, strlen(messageTx),
            0,
            (const struct sockaddr *)&client, sin_len);
 }
 
-char Networking_recievePacket()
+void Networking_recievePacket(char *messageRx)
 {
-    char messageRx[MSG_MAX_LEN];
     unsigned int sin_len = sizeof(client);
     int bytesRx = recvfrom(socketDescriptor,
                            messageRx, MSG_MAX_LEN, 0,
@@ -63,6 +63,4 @@ char Networking_recievePacket()
     int terminateIdx = (bytesRx < MSG_MAX_LEN) ? bytesRx : MSG_MAX_LEN - 1;
     messageRx[terminateIdx] = 0;
     printf("Message received (%d bytes): \n\n'%s'\n", bytesRx, messageRx);
-
-    return messageRx;
 }
