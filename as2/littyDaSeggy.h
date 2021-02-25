@@ -1,8 +1,8 @@
 #ifndef _LITTYDASEGGY_H_
 #define _LITTYDASEGGY_H_
 
-int i2cFileDesc;
+// int i2cFileDesc;
 void Seg_writeNumber(int i2cFileDesc, long long num);
-void configureI2C(int i2cFileDesc);
+int configureI2C();
 void shutDownI2C(int i2cFileDesc);
 #endif

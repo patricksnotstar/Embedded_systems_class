@@ -21,6 +21,7 @@
 // pthread_mutex_t reading_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t network = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t arrMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t littyMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t dontRead = PTHREAD_COND_INITIALIZER;
 // pthread_mutex_t arrSizeMutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -49,6 +50,8 @@ void *potHandler();
 static int getArrayElem(int idx);
 static int parseDigit(char *input);
 static bool arrInitialized;
+int i2cFileDesc;
+long long numSortedLastSecond;
 
 int main(int argc, char *argv[])
 {
@@ -57,13 +60,24 @@ int main(int argc, char *argv[])
     answer.keepSorting = false;
 
     Networking_configNetwork();
-    configureI2C(i2cFileDesc);
+    i2cFileDesc = configureI2C();
 
     // starts sorting thread
     Sorter_startSorting();
 
-    while (running)
+    bool mainRunning = true;
+    while (mainRunning)
     {
+        pthread_mutex_lock(&arrMutex);
+        {
+            pthread_mutex_lock(&littyMutex);
+            {
+                Seg_writeNumber(i2cFileDesc, numSortedLastSecond);
+            }
+            pthread_mutex_unlock(&littyMutex);
+        }
+        mainRunning = running;
+        pthread_mutex_unlock(&arrMutex);
     }
 
     Sorter_stopSorting();
@@ -75,42 +89,36 @@ int main(int argc, char *argv[])
 
 void *potHandler()
 {
-    while (true)
+    bool potRunning = true;
+    while (potRunning)
     {
         long long numSortedBefore = Sorter_getNumberArraysSorted();
         long seconds = 1;
         long nanoseconds = 0;
         struct timespec reqDelay = {seconds, nanoseconds};
         nanosleep(&reqDelay, (struct timespec *)NULL);
+        long long numSortedAfter = Sorter_getNumberArraysSorted();
+        pthread_mutex_lock(&littyMutex);
+        {
+            numSortedLastSecond = numSortedAfter - numSortedBefore;
+        }
+        pthread_mutex_unlock(&littyMutex);
 
         int a2d = Pothead_getVoltage0Reading();
         int size = Pothead_calcArraySize(a2d);
-        // printf("New array size: %d\n", size);
+        printf("New array size: %d\n", size);
 
         Sorter_setArraySize(size);
 
-        long long numSortedAfter = Sorter_getNumberArraysSorted();
+        printf("Number of arrays sorted last second: %lld\n", numSortedLastSecond);
 
-        long long numSortedLastSecond = numSortedAfter - numSortedBefore;
-
-        // printf("Number of arrays sorted last second: %lld\n", numSortedLastSecond);
-
-        Seg_writeNumber(i2cFileDesc, numSortedLastSecond);
-
-        bool potRunning;
         pthread_mutex_lock(&network);
         {
             potRunning = running;
         }
         pthread_mutex_unlock(&network);
-
-        if (!potRunning)
-        {
-            pthread_exit(0);
-        }
     }
-
-    return 0;
+    pthread_exit(0);
 }
 
 void Sorter_startSorting(void)
@@ -135,8 +143,10 @@ void Sorter_stopSorting(void)
     pthread_join(tid, NULL);
     pthread_join(networkId, NULL);
     pthread_join(potId, NULL);
-    free(answer.arr);
-    answer.arr = NULL;
+    pthread_mutex_destroy(&arrMutex);
+    pthread_mutex_destroy(&network);
+    pthread_mutex_destroy(&littyMutex);
+    pthread_cond_destroy(&dontRead);
 }
 
 void *bubbleSort(void *ans)
@@ -144,7 +154,8 @@ void *bubbleSort(void *ans)
     time_t t;
     srand((unsigned)time(&t));
     struct sortedAnswer *answer = ans;
-    while (true)
+    bool sortRunning = true;
+    while (sortRunning)
     {
         int currentSize;
         pthread_mutex_lock(&arrMutex);
@@ -186,11 +197,7 @@ void *bubbleSort(void *ans)
                     if (answer->arr[j] > answer->arr[j + 1])
                     {
                         swap(&answer->arr[j], &answer->arr[j + 1]);
-                        if (running == false)
-                        {
-                            pthread_mutex_unlock(&arrMutex);
-                            pthread_exit(0);
-                        }
+                        sortRunning = running;
                     }
                 }
                 pthread_mutex_unlock(&arrMutex);
@@ -209,6 +216,7 @@ void *bubbleSort(void *ans)
         }
         pthread_mutex_unlock(&arrMutex);
     }
+    pthread_exit(0);
 }
 
 static void swap(int *i, int *j)
@@ -371,8 +379,8 @@ static int getArrayElem(int idx)
 
 void *networkHandler()
 { //needs to continually send and recieve packets until thread is shutdow
-
-    while (true)
+    bool networkRunning = true;
+    while (networkRunning)
     {
         char messageRx[MSG_MAX_LEN];
         memset(messageRx, '\0', sizeof(messageRx));
@@ -388,17 +396,12 @@ void *networkHandler()
         Sorter_readUserInput(messageRx, outResponse);
 
         Networking_sendPacket(outResponse);
-        bool networkRunning;
+
         pthread_mutex_lock(&network);
         {
             networkRunning = running;
         }
         pthread_mutex_unlock(&network);
-
-        if (!networkRunning)
-        {
-            pthread_exit(0);
-        }
     }
-    return NULL;
+    pthread_exit(0);
 }

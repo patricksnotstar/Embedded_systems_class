@@ -47,10 +47,10 @@ static void writeToFile(const char *fileName, const char *value)
     fclose(pFile);
 }
 
-void configureI2C(int i2cFileDesc)
+int configureI2C()
 {
 
-    i2cFileDesc = initI2cBus(I2CDRV_LINUX_BUS1, I2C_DEVICE_ADDRESS);
+    int i2cFileDesc = initI2cBus(I2CDRV_LINUX_BUS1, I2C_DEVICE_ADDRESS);
 
     system("config-pin P9_17 i2c");
     system("config-pin P9_18 i2c");
@@ -74,6 +74,8 @@ void configureI2C(int i2cFileDesc)
 
     changeState(LEFT_DIGIT, "0");
     changeState(RIGHT_DIGIT, "0");
+
+    return i2cFileDesc;
 }
 
 void shutDownI2C(int i2cFileDesc)
@@ -206,25 +208,37 @@ void Seg_writeNumber(int i2cFileDesc, long long num)
         ones = num % 10; // get second digit of number
     }
 
-    // printf("Writing %lld to i2c\n", num);
-    long seconds = 0;
-    long nanoseconds = 10000000;
-    struct timespec reqDelay = {seconds, nanoseconds};
+    // long seconds = 0;
+    // long nanoseconds = 10000000;
+    // struct timespec reqDelay = {seconds, nanoseconds};
     // turn both numbers of display off
     changeState(LEFT_DIGIT, "0");
     changeState(RIGHT_DIGIT, "0");
 
     // write to left and turn on, then sleep
-    writeDigit(i2cFileDesc, tens);
-    changeState(LEFT_DIGIT, "1");
-
-    nanosleep(&reqDelay, (struct timespec *)NULL);
-    //turn off left
-    changeState(LEFT_DIGIT, "0");
-
-    // write to right and turn on, then sleep
     writeDigit(i2cFileDesc, ones);
     changeState(RIGHT_DIGIT, "1");
+    // nanosleep(&reqDelay, (struct timespec *)NULL);
+    // changeState(RIGHT_DIGIT, "0");
+    // changeState(LEFT_DIGIT, "1");
 
-    nanosleep(&reqDelay, (struct timespec *)NULL);
+    //turn on right
+    // changeState(RIGHT_DIGIT, "1");
+    // changeState(LEFT_DIGIT, "0");
+
+    //reset
+    // changeState(LEFT_DIGIT, "0");
+    nanosleep((const struct timespec[]){{0, 10000000L}}, NULL);
+    changeState(RIGHT_DIGIT, "0");
+
+    // write to right and turn on, then sleep
+    writeDigit(i2cFileDesc, tens);
+    changeState(LEFT_DIGIT, "1");
+    // changeState(RIGHT_DIGIT, "0");
+
+    // nanosleep(&reqDelay, (struct timespec *)NULL);
+
+    nanosleep((const struct timespec[]){{0, 10000000L}}, NULL);
+    changeState(LEFT_DIGIT, "0");
+    // changeState(RIGHT_DIGIT, "0");
 }
