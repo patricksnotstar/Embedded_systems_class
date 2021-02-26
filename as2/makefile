@@ -20,7 +20,7 @@ sorter:
 	ls -l $(OUTDIR)/$(OUTFILE)
 
 noworky:
-	$(CC_C) $(CFLAGS) noworky.c -o $(OUTDIR)/$(OUTFILE)
+	$(CC_C) $(CFLAGS) noworky.c -o $(OUTDIR)/$(OUTFILE2)
 	ls -l $(OUTDIR)/$(OUTFILE)
 
 done: 
