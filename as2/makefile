@@ -21,10 +21,11 @@ sorter:
 
 noworky:
 	$(CC_C) $(CFLAGS) noworky.c -o $(OUTDIR)/$(OUTFILE2)
-	ls -l $(OUTDIR)/$(OUTFILE)
+	ls -l $(OUTDIR)/$(OUTFILE2)
 
 done: 
 	@echo "Finished building application."
 
 clean:
 	rm $(OUTDIR)/$(OUTFILE)
+	rm $(OUTDIR)/$(OUTFILE2)

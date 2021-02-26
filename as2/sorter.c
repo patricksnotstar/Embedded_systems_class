@@ -15,7 +15,6 @@
 
 #define DEFAULT 100
 #define MAX_BUFFER_SIZE 50000
-#define MAX_UDP_PACKET_SIZE 1500
 #define numArr 5
 #define NUMBER_SIZE 6
 #define DIGIT_SIZE 2
@@ -66,7 +65,7 @@ int main(int argc, char *argv[])
     answer.keepSorting = false;
 
     Networking_configNetwork();
-    i2cFileDesc = configureI2C();
+    i2cFileDesc = Seg_configureI2C();
 
     // starts sorting thread
     Sorter_startSorting();
@@ -88,11 +87,12 @@ int main(int argc, char *argv[])
 
     Sorter_stopSorting();
     Networking_shutDownNetwork();
-    shutDownI2C(i2cFileDesc);
+    Seg_shutDownI2C(i2cFileDesc);
 
     return 0;
 }
 
+// potentiometer and network thread managment functions
 void *potHandler()
 {
     bool potRunning = true;
@@ -125,6 +125,45 @@ void *potHandler()
     pthread_exit(0);
 }
 
+void *networkHandler()
+{
+    //needs to continually send and recieve packets until thread is shutdown
+    bool networkRunning = true;
+    while (networkRunning)
+    {
+        char messageRx[MSG_MAX_LEN];
+        memset(messageRx, '\0', sizeof(messageRx));
+        socklen_t sin_len = sizeof(client);
+        int bytesRx = recvfrom(socketDescriptor,
+                               messageRx, MSG_MAX_LEN, 0,
+                               (struct sockaddr *)&client, &sin_len);
+
+        // Make it null terminated
+        int terminateIdx = (bytesRx < MSG_MAX_LEN) ? bytesRx : MSG_MAX_LEN - 1;
+        messageRx[terminateIdx] = '\0';
+        char outResponse[MSG_MAX_LEN];
+        Sorter_readUserInput(messageRx, outResponse);
+
+        int outResponseSize = strlen(outResponse) * sizeof(char);
+        if (outResponseSize < MAX_UDP_PACKET_SIZE)
+        {
+            Networking_sendPacket(outResponse);
+        }
+        else
+        {
+            Networking_splitPackets(outResponse, outResponseSize);
+        }
+
+        pthread_mutex_lock(&runningMutex);
+        {
+            networkRunning = running;
+        }
+        pthread_mutex_unlock(&runningMutex);
+    }
+    pthread_exit(0);
+}
+
+// functions to start and stop the program (and cleanup)
 void Sorter_startSorting(void)
 {
     pthread_mutex_lock(&runningMutex);
@@ -153,6 +192,7 @@ void Sorter_stopSorting(void)
     pthread_cond_destroy(&dontRead);
 }
 
+//runs in sorting thread
 void *bubbleSort(void *ans)
 {
     time_t t;
@@ -399,71 +439,4 @@ static int getArrayElem(int idx)
     pthread_cond_signal(&dontDelete);
 
     return value;
-}
-
-// Function to split packets to send using UDP
-void split_packets(char *outResponse, int outResponseSize)
-{
-    char packet[MAX_UDP_PACKET_SIZE];
-    for (int i = 0; i < outResponseSize;)
-    {
-        memset(packet, '\0', MAX_UDP_PACKET_SIZE);
-        int j = i;
-        while (j < outResponseSize)
-        {
-            if (outResponse[j] != '\n')
-            {
-                j++;
-            }
-            else
-            {
-                break;
-            }
-        }
-        strncpy(packet, outResponse + i, j - i + 1);
-        i = j + 1;
-        Networking_sendPacket(packet);
-        long seconds = 0;
-        long nanoseconds = 1000000000;
-        struct timespec reqDelay = {seconds, nanoseconds};
-        nanosleep(&reqDelay, (struct timespec *)NULL);
-    }
-}
-
-void *networkHandler()
-{
-    //needs to continually send and recieve packets until thread is shutdow
-    bool networkRunning = true;
-    while (networkRunning)
-    {
-        char messageRx[MSG_MAX_LEN];
-        memset(messageRx, '\0', sizeof(messageRx));
-        socklen_t sin_len = sizeof(client);
-        int bytesRx = recvfrom(socketDescriptor,
-                               messageRx, MSG_MAX_LEN, 0,
-                               (struct sockaddr *)&client, &sin_len);
-
-        // Make it null terminated
-        int terminateIdx = (bytesRx < MSG_MAX_LEN) ? bytesRx : MSG_MAX_LEN - 1;
-        messageRx[terminateIdx] = '\0';
-        char outResponse[MSG_MAX_LEN];
-        Sorter_readUserInput(messageRx, outResponse);
-
-        int outResponseSize = strlen(outResponse) * sizeof(char);
-        if (outResponseSize < MAX_UDP_PACKET_SIZE)
-        {
-            Networking_sendPacket(outResponse);
-        }
-        else
-        {
-            split_packets(outResponse, outResponseSize);
-        }
-
-        pthread_mutex_lock(&runningMutex);
-        {
-            networkRunning = running;
-        }
-        pthread_mutex_unlock(&runningMutex);
-    }
-    pthread_exit(0);
 }

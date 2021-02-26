@@ -59,3 +59,32 @@ void Networking_recievePacket(char *messageRx)
     int terminateIdx = (bytesRx < MSG_MAX_LEN) ? bytesRx : MSG_MAX_LEN - 1;
     messageRx[terminateIdx] = 0;
 }
+
+// Function to split packets to send using UDP
+void Networking_splitPackets(char *outResponse, int outResponseSize)
+{
+    char packet[MAX_UDP_PACKET_SIZE];
+    for (int i = 0; i < outResponseSize;)
+    {
+        memset(packet, '\0', MAX_UDP_PACKET_SIZE);
+        int j = i;
+        while (j < outResponseSize)
+        {
+            if (outResponse[j] != '\n')
+            {
+                j++;
+            }
+            else
+            {
+                break;
+            }
+        }
+        strncpy(packet, outResponse + i, j - i + 1);
+        i = j + 1;
+        Networking_sendPacket(packet);
+        long seconds = 0;
+        long nanoseconds = 1000000000;
+        struct timespec reqDelay = {seconds, nanoseconds};
+        nanosleep(&reqDelay, (struct timespec *)NULL);
+    }
+}

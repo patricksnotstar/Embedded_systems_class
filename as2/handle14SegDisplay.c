@@ -47,7 +47,7 @@ static void writeToFile(const char *fileName, const char *value)
     fclose(pFile);
 }
 
-int configureI2C()
+int Seg_configureI2C()
 {
 
     int i2cFileDesc = initI2cBus(I2CDRV_LINUX_BUS1, I2C_DEVICE_ADDRESS);
@@ -78,7 +78,7 @@ int configureI2C()
     return i2cFileDesc;
 }
 
-void shutDownI2C(int i2cFileDesc)
+void Seg_shutDownI2C(int i2cFileDesc)
 {
 
     changeState(LEFT_DIGIT, "0");
