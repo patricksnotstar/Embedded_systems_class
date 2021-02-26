@@ -16,7 +16,7 @@ int Networking_configNetwork()
     memset(&server, 0, sizeof(server));
     memset(&client, 0, sizeof(client));
 
-    server.sin_family = AF_INET;                // Connection may be from network
+    server.sin_family = AF_INET;                // Connection may be from runningMutex
     server.sin_addr.s_addr = htonl(INADDR_ANY); // Host to Network long
     server.sin_port = htons(PORT);              // Host to Network short
 

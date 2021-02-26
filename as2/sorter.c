@@ -19,7 +19,7 @@
 
 // initialize mutexes and conditionals
 // pthread_mutex_t reading_lock = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t network = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t runningMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t arrMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t littyMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t dontRead = PTHREAD_COND_INITIALIZER;
@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
     bool mainRunning = true;
     while (mainRunning)
     {
-        pthread_mutex_lock(&arrMutex);
+        pthread_mutex_lock(&runningMutex);
         {
             pthread_mutex_lock(&littyMutex);
             {
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
             pthread_mutex_unlock(&littyMutex);
         }
         mainRunning = running;
-        pthread_mutex_unlock(&arrMutex);
+        pthread_mutex_unlock(&runningMutex);
     }
 
     Sorter_stopSorting();
@@ -112,22 +112,22 @@ void *potHandler()
 
         printf("Number of arrays sorted last second: %lld\n", numSortedLastSecond);
 
-        pthread_mutex_lock(&network);
+        pthread_mutex_lock(&runningMutex);
         {
             potRunning = running;
         }
-        pthread_mutex_unlock(&network);
+        pthread_mutex_unlock(&runningMutex);
     }
     pthread_exit(0);
 }
 
 void Sorter_startSorting(void)
 {
-    pthread_mutex_lock(&network);
+    pthread_mutex_lock(&runningMutex);
     {
         running = true;
     }
-    pthread_mutex_unlock(&network);
+    pthread_mutex_unlock(&runningMutex);
     pthread_create(&networkId, NULL, &networkHandler, NULL);
     pthread_create(&potId, NULL, &potHandler, NULL);
     pthread_create(&tid, NULL, &bubbleSort, &answer);
@@ -135,16 +135,16 @@ void Sorter_startSorting(void)
 
 void Sorter_stopSorting(void)
 {
-    pthread_mutex_lock(&network);
+    pthread_mutex_lock(&runningMutex);
     {
         running = false;
     }
-    pthread_mutex_unlock(&network);
+    pthread_mutex_unlock(&runningMutex);
     pthread_join(tid, NULL);
     pthread_join(networkId, NULL);
     pthread_join(potId, NULL);
     pthread_mutex_destroy(&arrMutex);
-    pthread_mutex_destroy(&network);
+    pthread_mutex_destroy(&runningMutex);
     pthread_mutex_destroy(&littyMutex);
     pthread_cond_destroy(&dontRead);
 }
@@ -197,14 +197,11 @@ void *bubbleSort(void *ans)
                     if (answer->arr[j] > answer->arr[j + 1])
                     {
                         swap(&answer->arr[j], &answer->arr[j + 1]);
-                        sortRunning = running;
                     }
                 }
                 pthread_mutex_unlock(&arrMutex);
             }
         }
-
-        answer->sortedCount++;
 
         // check if anyone is reading current array
         // if not, then free
@@ -213,8 +210,15 @@ void *bubbleSort(void *ans)
             free(answer->arr);
             answer->arr = NULL;
             arrInitialized = false;
+            answer->sortedCount++;
         }
         pthread_mutex_unlock(&arrMutex);
+
+        pthread_mutex_lock(&runningMutex);
+        {
+            sortRunning = running;
+        }
+        pthread_mutex_unlock(&runningMutex);
     }
     pthread_exit(0);
 }
@@ -246,9 +250,8 @@ int Sorter_getArrayLength(void)
     return size;
 }
 
-char *Sorter_getArrayData()
+char *Sorter_getArrayData(char *copy)
 {
-    char *copy;
     char temp[DIGIT_SIZE]; // size 6 to include 4 digits, a comma and null termination character
 
     pthread_mutex_lock(&arrMutex);
@@ -283,6 +286,8 @@ char *Sorter_getArrayData()
     }
     pthread_mutex_unlock(&arrMutex);
 
+    // Pass in a buffer maybe so you dont need malloc
+    // make global array with buffer 20,000
     return copy;
 }
 
@@ -309,7 +314,14 @@ static void Sorter_readUserInput(char *input, char *output)
     }
     else if (strncmp(input, "get array", strlen("get array")) == 0)
     {
-        sprintf(output, "%s", Sorter_getArrayData());
+        char *arrData = "";
+        Sorter_getArrayData(arrData);
+        sprintf(output, "%s", arrData);
+        if (arrData != NULL)
+        {
+            free(arrData);
+            arrData = NULL;
+        }
     }
     else if (strncmp(input, "get length", strlen("get length")) == 0)
     {
@@ -370,6 +382,7 @@ static int getArrayElem(int idx)
     int value = -1;
     pthread_mutex_lock(&arrMutex);
     {
+
         value = answer.arr[idx];
     }
     pthread_mutex_unlock(&arrMutex);
@@ -397,11 +410,11 @@ void *networkHandler()
 
         Networking_sendPacket(outResponse);
 
-        pthread_mutex_lock(&network);
+        pthread_mutex_lock(&runningMutex);
         {
             networkRunning = running;
         }
-        pthread_mutex_unlock(&network);
+        pthread_mutex_unlock(&runningMutex);
     }
     pthread_exit(0);
 }
