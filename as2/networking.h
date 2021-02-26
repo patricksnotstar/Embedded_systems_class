@@ -1,3 +1,4 @@
+//Module for handling communication between client and host via UDP and shutting down network.
 #ifndef _NETWORKING_H_
 #define _NETWORKING_H_
 
@@ -7,8 +8,6 @@
 
 #define MSG_MAX_LEN 20000
 #define PORT 12345
-
-//Module for communicatino between client and host via UDP.
 
 int socketDescriptor;
 // Address

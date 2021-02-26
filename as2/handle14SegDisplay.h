@@ -1,7 +1,6 @@
-#ifndef _LITTYDASEGGY_H_
-#define _LITTYDASEGGY_H_
-
-// Module for controlling I2C display
+// Module for controlling 14-seg display
+#ifndef _HANDLE14SEGDISPLAY_H_
+#define _HANDLE14SEGDISPLAY_H_
 
 // startup and shutdown functions
 int configureI2C();

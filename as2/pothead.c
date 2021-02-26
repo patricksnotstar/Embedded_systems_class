@@ -54,7 +54,7 @@ int Pothead_getVoltage0Reading()
     if (!f)
     {
         printf("ERROR: Unable to open voltage input file. Cape loaded?\n");
-        printf(" Check /boot/uEnv.txt for correct options.\n");
+        printf("Check /boot/uEnv.txt for correct options.\n");
         exit(-1);
     }
     // Get reading

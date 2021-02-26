@@ -9,25 +9,25 @@
 #include <unistd.h> // for close()
 
 #include "sorter.h"
-#include "littyDaSeggy.h"
+#include "handle14SegDisplay.h"
 #include "pothead.h"
 #include "networking.h"
 
 #define DEFAULT 100
+#define MAX_BUFFER_SIZE 50000
+#define MAX_UDP_PACKET_SIZE 1500
 #define numArr 5
-#define DIGIT_SIZE 6
+#define NUMBER_SIZE 6
+#define DIGIT_SIZE 2
 
 // initialize mutexes and conditionals
-// pthread_mutex_t reading_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t runningMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t arrMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t littyMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t dontRead = PTHREAD_COND_INITIALIZER;
-// pthread_mutex_t arrSizeMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t dontDelete = PTHREAD_COND_INITIALIZER;
 
-// termination conditions
-bool readVar = false;
-
+// Holds all information needed for array sorting
 struct sortedAnswer
 {
     int *arr;
@@ -37,21 +37,27 @@ struct sortedAnswer
     bool keepSorting;
 };
 
+// thread ids
 static pthread_t tid;
 static pthread_t networkId;
 static pthread_t potId;
+
 static struct sortedAnswer answer;
 static void swap(int *i, int *j);
 static void Sorter_readUserInput(char *input, char *output);
-static bool running;
 void *bubbleSort(void *ans);
 void *networkHandler();
 void *potHandler();
 static int getArrayElem(int idx);
 static int parseDigit(char *input);
-static bool arrInitialized;
 int i2cFileDesc;
 long long numSortedLastSecond;
+// Condition variable to prevent deleting an array then read the array
+static bool arrInitialized;
+
+// Terminating variable
+static bool running;
+static bool readArr = false;
 
 int main(int argc, char *argv[])
 {
@@ -110,8 +116,6 @@ void *potHandler()
 
         Sorter_setArraySize(size);
 
-        printf("Number of arrays sorted last second: %lld\n", numSortedLastSecond);
-
         pthread_mutex_lock(&runningMutex);
         {
             potRunning = running;
@@ -158,6 +162,7 @@ void *bubbleSort(void *ans)
     while (sortRunning)
     {
         int currentSize;
+        // Initialize Array
         pthread_mutex_lock(&arrMutex);
         {
             if (answer->nextSize != -1)
@@ -188,6 +193,7 @@ void *bubbleSort(void *ans)
         pthread_mutex_unlock(&arrMutex);
         pthread_cond_signal(&dontRead);
 
+        // Sort array
         for (int i = 0; i < currentSize - 1; i++)
         {
             for (int j = 0; j < currentSize - i - 1; j++)
@@ -207,11 +213,16 @@ void *bubbleSort(void *ans)
         // if not, then free
         pthread_mutex_lock(&arrMutex);
         {
+            if (readArr)
+            {
+                pthread_cond_wait(&dontDelete, &arrMutex);
+            }
             free(answer->arr);
             answer->arr = NULL;
             arrInitialized = false;
             answer->sortedCount++;
         }
+
         pthread_mutex_unlock(&arrMutex);
 
         pthread_mutex_lock(&runningMutex);
@@ -250,21 +261,22 @@ int Sorter_getArrayLength(void)
     return size;
 }
 
-char *Sorter_getArrayData(char *copy)
+void Sorter_getArrayData(char *copy)
 {
-    char temp[DIGIT_SIZE]; // size 6 to include 4 digits, a comma and null termination character
+    char temp[NUMBER_SIZE]; // size 6 to include 4 digits, a comma and null termination character
+    memset(copy, '\0', MAX_BUFFER_SIZE);
 
     pthread_mutex_lock(&arrMutex);
     {
+        readArr = true;
         if (!arrInitialized)
         {
             pthread_cond_wait(&dontRead, &arrMutex);
         }
-        copy = malloc(sizeof(int) * answer.arrSize);
 
         for (int i = 1; i < answer.arrSize + 1; i++)
         {
-            memset(temp, '\0', DIGIT_SIZE);
+            memset(temp, '\0', NUMBER_SIZE);
             if (i != answer.arrSize)
             {
                 if (i % 10 != 0)
@@ -283,12 +295,10 @@ char *Sorter_getArrayData(char *copy)
 
             strcat(copy, temp);
         }
+        readArr = false;
     }
     pthread_mutex_unlock(&arrMutex);
-
-    // Pass in a buffer maybe so you dont need malloc
-    // make global array with buffer 20,000
-    return copy;
+    pthread_cond_signal(&dontDelete);
 }
 
 long long Sorter_getNumberArraysSorted(void)
@@ -314,14 +324,9 @@ static void Sorter_readUserInput(char *input, char *output)
     }
     else if (strncmp(input, "get array", strlen("get array")) == 0)
     {
-        char *arrData = "";
-        Sorter_getArrayData(arrData);
-        sprintf(output, "%s", arrData);
-        if (arrData != NULL)
-        {
-            free(arrData);
-            arrData = NULL;
-        }
+        char char_arr[MAX_BUFFER_SIZE];
+        Sorter_getArrayData(char_arr);
+        sprintf(output, "%s", char_arr);
     }
     else if (strncmp(input, "get length", strlen("get length")) == 0)
     {
@@ -353,8 +358,8 @@ static void Sorter_readUserInput(char *input, char *output)
 
 static int parseDigit(char *input)
 {
-    char nums[6] = "";
-    char temp[2];
+    char nums[NUMBER_SIZE] = "";
+    char temp[DIGIT_SIZE];
     int val = -1;
     for (int i = 4; i < strlen(input) - 1; i++)
     {
@@ -382,22 +387,58 @@ static int getArrayElem(int idx)
     int value = -1;
     pthread_mutex_lock(&arrMutex);
     {
-
+        readArr = true;
+        if (!arrInitialized)
+        {
+            pthread_cond_wait(&dontRead, &arrMutex);
+        }
         value = answer.arr[idx];
+        readArr = false;
     }
     pthread_mutex_unlock(&arrMutex);
+    pthread_cond_signal(&dontDelete);
 
     return value;
 }
 
+// Function to split packets to send using UDP
+void split_packets(char *outResponse, int outResponseSize)
+{
+    char packet[MAX_UDP_PACKET_SIZE];
+    for (int i = 0; i < outResponseSize;)
+    {
+        memset(packet, '\0', MAX_UDP_PACKET_SIZE);
+        int j = i;
+        while (j < outResponseSize)
+        {
+            if (outResponse[j] != '\n')
+            {
+                j++;
+            }
+            else
+            {
+                break;
+            }
+        }
+        strncpy(packet, outResponse + i, j - i + 1);
+        i = j + 1;
+        Networking_sendPacket(packet);
+        long seconds = 0;
+        long nanoseconds = 1000000000;
+        struct timespec reqDelay = {seconds, nanoseconds};
+        nanosleep(&reqDelay, (struct timespec *)NULL);
+    }
+}
+
 void *networkHandler()
-{ //needs to continually send and recieve packets until thread is shutdow
+{
+    //needs to continually send and recieve packets until thread is shutdow
     bool networkRunning = true;
     while (networkRunning)
     {
         char messageRx[MSG_MAX_LEN];
         memset(messageRx, '\0', sizeof(messageRx));
-        unsigned int sin_len = sizeof(client);
+        socklen_t sin_len = sizeof(client);
         int bytesRx = recvfrom(socketDescriptor,
                                messageRx, MSG_MAX_LEN, 0,
                                (struct sockaddr *)&client, &sin_len);
@@ -408,7 +449,15 @@ void *networkHandler()
         char outResponse[MSG_MAX_LEN];
         Sorter_readUserInput(messageRx, outResponse);
 
-        Networking_sendPacket(outResponse);
+        int outResponseSize = strlen(outResponse) * sizeof(char);
+        if (outResponseSize < MAX_UDP_PACKET_SIZE)
+        {
+            Networking_sendPacket(outResponse);
+        }
+        else
+        {
+            split_packets(outResponse, outResponseSize);
+        }
 
         pthread_mutex_lock(&runningMutex);
         {

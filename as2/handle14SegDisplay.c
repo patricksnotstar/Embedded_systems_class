@@ -11,7 +11,7 @@
 
 #include "sorter.h"
 #include "pothead.h"
-#include "littyDaSeggy.h"
+#include "handle14SegDisplay.h"
 
 #define I2C_DEVICE_ADDRESS 0x20
 #define I2CDRV_LINUX_BUS0 "/dev/i2c-0"
@@ -208,37 +208,25 @@ void Seg_writeNumber(int i2cFileDesc, long long num)
         ones = num % 10; // get second digit of number
     }
 
-    // long seconds = 0;
-    // long nanoseconds = 10000000;
-    // struct timespec reqDelay = {seconds, nanoseconds};
+    long seconds = 0;
+    long nanoseconds = 10000000;
+    struct timespec reqDelay = {seconds, nanoseconds};
     // turn both numbers of display off
     changeState(LEFT_DIGIT, "0");
     changeState(RIGHT_DIGIT, "0");
 
-    // write to left and turn on, then sleep
+    //turn on right
     writeDigit(i2cFileDesc, ones);
     changeState(RIGHT_DIGIT, "1");
-    // nanosleep(&reqDelay, (struct timespec *)NULL);
-    // changeState(RIGHT_DIGIT, "0");
-    // changeState(LEFT_DIGIT, "1");
-
-    //turn on right
-    // changeState(RIGHT_DIGIT, "1");
-    // changeState(LEFT_DIGIT, "0");
 
     //reset
-    // changeState(LEFT_DIGIT, "0");
-    nanosleep((const struct timespec[]){{0, 10000000L}}, NULL);
+    nanosleep(&reqDelay, (struct timespec *)NULL);
     changeState(RIGHT_DIGIT, "0");
 
     // write to right and turn on, then sleep
     writeDigit(i2cFileDesc, tens);
     changeState(LEFT_DIGIT, "1");
-    // changeState(RIGHT_DIGIT, "0");
 
-    // nanosleep(&reqDelay, (struct timespec *)NULL);
-
-    nanosleep((const struct timespec[]){{0, 10000000L}}, NULL);
+    nanosleep(&reqDelay, (struct timespec *)NULL);
     changeState(LEFT_DIGIT, "0");
-    // changeState(RIGHT_DIGIT, "0");
 }

@@ -42,10 +42,6 @@ void Networking_sendPacket(char *messageTx)
 {
     // Transmit a reply:
     unsigned int sin_len = sizeof(client);
-    // char messageTx[MSG_MAX_LEN];
-    // memset(messageTx, 0, sizeof(messageTx));
-    // put message in messagTx
-    // sprintf(messageTx, "%s", message);
     sendto(socketDescriptor,
            messageTx, strlen(messageTx),
            0,
@@ -59,8 +55,7 @@ void Networking_recievePacket(char *messageRx)
                            messageRx, MSG_MAX_LEN, 0,
                            (struct sockaddr *)&client, &sin_len);
 
-    // Make it null terminated (so string functions work):
+    // Make it null terminated
     int terminateIdx = (bytesRx < MSG_MAX_LEN) ? bytesRx : MSG_MAX_LEN - 1;
     messageRx[terminateIdx] = 0;
-    // printf("Message received (%d bytes): \n\n'%s'\n", bytesRx, messageRx);
 }
