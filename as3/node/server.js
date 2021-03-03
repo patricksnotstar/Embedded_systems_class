@@ -4,7 +4,7 @@
 //
 // Launch server with:
 //   $ node server.js
-var PORT_NUMBER = 8042;
+var PORT_NUMBER = 8088;
 
 
 var http = require('http');
@@ -66,5 +66,5 @@ function sendFile(response, filePath, fileContents) {
 /*
  * Create the beat box server to listen for the websocket
  */
-var mathServer = require('./lib/math_server');
-mathServer.listen(server);
+var beatboxServer = require('./lib/beatbox_server');
+beatboxServer.listen(server);

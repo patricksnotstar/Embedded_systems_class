@@ -1,5 +1,5 @@
 {
-	"name": "Shayna & Patricks BeatBox",
+	"name": "beatbox-server",
 	"version": "0.0.1",
 	"description": "CMPT 433 AS3 BeatBox",
 	"dependencies": {
