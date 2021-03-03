@@ -1,0 +1,9 @@
+{
+	"name": "Shayna & Patricks BeatBox",
+	"version": "0.0.1",
+	"description": "CMPT 433 AS3 BeatBox",
+	"dependencies": {
+		"socket.io": "~0.9.6",
+		"mime": "~1.2.7"
+	}
+}
