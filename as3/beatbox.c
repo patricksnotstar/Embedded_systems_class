@@ -12,12 +12,24 @@
 #include "beatbox.h"
 #include "networking.h"
 #include "getInput.h"
+#include "audioMixer.h"
+
+#define EXPORT "/sys/class/gpio/export"
+#define UP_DIR "/sys/class/gpio/gpio26/direction"
+#define DOWN_DIR "/sys/class/gpio/gpio46/direction"
+#define LEFT_DIR "/sys/class/gpio/gpio65/direction"
+#define RIGHT_DIR "/sys/class/gpio/gpio47/direction"
+#define MIDDLE_DIR "/sys/class/gpio/gpio27/direction"
+#define UPTIME "/proc/uptime"
 
 pthread_mutex_t jInputMutex = PTHREAD_MUTEX_INITIALIZER;
 
 static void sleep_thread(long seconds, long nanoseconds);
 static void configurePins();
 void *readInput();
+static void processCommand(char *input, char *output);
+static void changeVolume(char *direction);
+void getUptime(char *buff);
 
 static pthread_t tid;
 
@@ -25,14 +37,92 @@ int main(int argc, char **argv)
 {
     configurePins();
     Networking_configNetwork();
+    AudioMixer_setVolume(DEFAULT_VOLUME);
 
     int jInput;
 
     pthread_create(&tid, NULL, &readInput, &jInput);
 
+    // int volume = AudioMixer_getVolume();
+    // AudioMixer_setVolume(newVolume);
+
     while (true)
     {
+
+        char messageRx[MSG_MAX_LEN];
+        memset(messageRx, '\0', sizeof(messageRx));
+        socklen_t sin_len = sizeof(client);
+        int bytesRx = recvfrom(socketDescriptor,
+                               messageRx, MSG_MAX_LEN, 0,
+                               (struct sockaddr *)&client, &sin_len);
+
+        // Make it null terminated
+        int terminateIdx = (bytesRx < MSG_MAX_LEN) ? bytesRx : MSG_MAX_LEN - 1;
+        messageRx[terminateIdx] = '\0';
+        char outResponse[MSG_MAX_LEN];
+        processCommand(messageRx, outResponse);
+
+        Networking_sendPacket(outResponse);
     }
+}
+
+static void changeVolume(char *direction)
+{
+    int currentVol = AudioMixer_getVolume();
+
+    int max = 100;
+    int min = 0;
+
+    if (strncmp(direction, "up", strlen(direction)) == 0)
+    {
+        if (currentVol != max)
+        {
+            int newVolume = currentVol + 5;
+            AudioMixer_setVolume(newVolume);
+        }
+    }
+    else if (strncmp(direction, "down", strlen(direction)) == 0)
+    {
+        if (currentVol != min)
+        {
+            int newVolume = currentVol - 5;
+            AudioMixer_setVolume(newVolume);
+        }
+    }
+}
+
+static void processCommand(char *input, char *output)
+{
+    memset(output, '\0', MSG_MAX_LEN);
+    if (strncmp(input, "volume_up", strlen(input)) == 0)
+    {
+        changeVolume("up");
+        sprintf(output, "%d", AudioMixer_getVolume());
+    }
+    else if (strncmp(input, "volume_down", strlen(input)) == 0)
+    {
+        changeVolume("down");
+        sprintf(output, "%d", AudioMixer_getVolume());
+    }
+    else if (strncmp(input, "uptime", strlen(input)) == 0)
+    {
+        char uptime[100];
+        getUptime(uptime);
+        sprintf(output, "%s", uptime);
+    }
+}
+
+void getUptime(char *buff)
+{
+
+    FILE *pFile = fopen(UPTIME, "r");
+    if (pFile == NULL)
+    {
+        fprintf(stderr, "Unable to open path for writing\n");
+        exit(-1);
+    }
+    fgets(buff, 100, pFile);
+    fclose(pFile);
 }
 
 void *readInput()

@@ -3,6 +3,7 @@ PROJECT_NAME=as3
 DEPLOY_PATH= $(HOME)/cmpt433/public/$(PROJECT_NAME)-copy
 OUTFILE = beatbox
 OUTDIR = $(HOME)/cmpt433/public/myApps
+LFLAGS = -L$(HOME)/cmpt433/public/asound_lib_BBB -lasound
 
 CROSS_COMPILE = arm-linux-gnueabihf-
 CC_C = $(CROSS_COMPILE)gcc
@@ -22,13 +23,8 @@ deploy:
 	@echo '      Or, just run the node_install target in this makefile.'
 
 node_install:
-	@echo ''
-	@echo ''
-	@echo 'INSTALLING REQUIRED NODE PACKAGES'
-	@echo '(This may take some time)'
-	@echo ''
 	cd $(DEPLOY_PATH) && npm install
 
 beatbox:
-	$(CC_C) $(CFLAGS) beatbox.c getInput.c networking.c -o $(OUTDIR)/$(OUTFILE)
-	ls -l $(OUTDIR)/$(OUTFILE)
+	$(CC_C) $(CFLAGS) beatbox.c getInput.c networking.c audioMixer.c -o $(OUTDIR)/$(OUTFILE) $(LFLAGS)
+	ls -l $(OUTDIR)/$(OUTFILE) 

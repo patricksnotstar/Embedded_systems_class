@@ -2,12 +2,6 @@
 #ifndef _GETINPUT_H_
 #define _GETINPUT_H_
 
-#define EXPORT "/sys/class/gpio/export"
-#define UP_DIR "/sys/class/gpio/gpio26/direction"
-#define DOWN_DIR "/sys/class/gpio/gpio46/direction"
-#define LEFT_DIR "/sys/class/gpio/gpio65/direction"
-#define RIGHT_DIR "/sys/class/gpio/gpio47/direction"
-#define MIDDLE_DIR "/sys/class/gpio/gpio27/direction"
 #define UP "/sys/class/gpio/gpio26/value"
 #define DOWN "/sys/class/gpio/gpio46/value"
 #define LEFT "/sys/class/gpio/gpio65/value"

@@ -3,6 +3,8 @@
 #ifndef AUDIO_MIXER_H
 #define AUDIO_MIXER_H
 
+#define DEFAULT_VOLUME 80
+
 typedef struct
 {
     int numSamples;

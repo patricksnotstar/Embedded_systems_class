@@ -25,17 +25,12 @@ $(document).ready(function () {
     // clearTimeout(errorTimer);
 
 
-    // Called the function in each second
-    var interval = setInterval(function () {
-        // TODO: get current time from /proc/uptime via UDP
-        sendMessage("uptime", null);
-        $("#status").val(counter)
-
-    }, 1000); // Run for each second
+    // Setup a repeating function (every 1s)
+    window.setInterval(function () { sendMessage('uptime') }, 1000);
 
     // Make this the zenCape volume later
-    $("#volumeId").val(0);
-    $("#bpmId").val(120);
+    // $("#volumeId").val(0);
+    // $("#bpmId").val(120);
 
     $('#modeNone').click(function () {
         sendMessage("mode", "None");
@@ -47,20 +42,20 @@ $(document).ready(function () {
         sendMessage("mode", "Describe");
     });
     $('#volumeUp').click(function () {
-        var currentVol = $("#volumeId").val();
-        sendMessage("volume up", currentVol);
+        // var currentVol = $("#volumeId").val();
+        sendMessage("volume_up", null);
     });
     $('#volumeDown').click(function () {
-        var currentVol = $("#volumeId").val();
-        sendMessage("volume down", currentVol);
+        // var currentVol = $("#volumeId").val();
+        sendMessage("volume_down", null);
     });
     $('#bpmUp').click(function () {
         var currentBPM = $("#bpmId").val();
-        sendMessage("bpm up", currentBPM);
+        sendMessage("bpm_up", null);
     });
     $('#bpmDown').click(function () {
         var currentBPM = $("#bpmId").val();
-        sendMessage("bpm down", currentBPM);
+        sendMessage("bpm_down", null);
     });
 
     $('#hi-hat').click(function () {
@@ -76,8 +71,17 @@ $(document).ready(function () {
         sendMessage("drums", sound);
     });
 
-    socket.on("reply", function (result) {
-        // process reply from UDP socket and put value into front end
+    socket.on("volume_change", function (result) {
+        // update volume value on front end
+        console.log("Volume changing to: ", result);
+        $("#volumeId").val(result)
+    });
+
+    socket.on("update_time", function (result) {
+        var time = result.split(' ')[0];
+        // console.log(time);
+        time = new Date(Number(time) * 1000).toISOString().substr(11, 8)
+        $("#statusid").text(time + " (H:M:S)")
     });
 
     socket.on('error', function (result) {
@@ -93,6 +97,8 @@ function sendMessage(action, data) {
         action: action,
         data: data
     }
+
+    // console.log("Sending message to server: ", message)
     socket.emit("action", message);
 }
 

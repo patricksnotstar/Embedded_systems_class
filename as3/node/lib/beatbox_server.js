@@ -4,6 +4,7 @@
 
 var socketio = require('socket.io');
 var io;
+var dgram = require('dgram');
 
 exports.listen = function (server) {
     io = socketio.listen(server);
@@ -15,6 +16,7 @@ exports.listen = function (server) {
     });
 };
 
+
 function handleCommand(socket) {
     // var errorTimer = setTimeout(function () {
     //     socket.emit("daError", "Oops: User too slow at sending first command.");
@@ -25,13 +27,14 @@ function handleCommand(socket) {
 
 
     socket.on("action", function (data) {
-        console.log('action: ' + data);
+        // console.log('action sent from ui: ' + data.action);
         // Info for connecting to the local process via UDP
         var PORT = 12345;
         var HOST = '127.0.0.1';
 
         // need to store different info in buffer for each socket.on function below and then create packet afterwards ?
-        var buffer = new Buffer(data);
+        var buffer = new Buffer(data.action);
+        // console.log("Buffer created in server: ", buffer);
 
         var client = dgram.createSocket('udp4');
         client.send(buffer, 0, buffer.length, PORT, HOST, function (err, bytes) {
@@ -49,9 +52,11 @@ function handleCommand(socket) {
             console.log("UDP Client: message Rx" + remote.address + ':' + remote.port + ' - ' + message);
 
             var reply = message.toString('utf8')
-            socket.emit('reply', reply);
 
-            client.close();
+            processUDPResponse(socket, reply, data)
+            // socket.emit('reply', reply);
+
+            // client.close();
 
         });
 
@@ -126,10 +131,30 @@ function handleCommand(socket) {
     // });
 
 
-    client.on("UDP Client: close", function () {
-        console.log("closed");
-    });
-    client.on("UDP Client: error", function (err) {
-        console.log("error: ", err);
-    });
+    // client.on("UDP Client: close", function () {
+    //     console.log("closed");
+    // });
+    // client.on("UDP Client: error", function (err) {
+    //     console.log("error: ", err);
+    // });
+}
+
+function processUDPResponse(socket, reply, data) {
+    var response;
+    switch (data.action) {
+        case "volume_up":
+            socket.emit("volume_change", reply)
+        case "volume_down":
+            socket.emit("volume_change", reply)
+        case "bpm_up":
+            socket.emit("bpm_up", reply)
+        case "bpm_down":
+            socket.emit("bpm_down", reply)
+        case "uptime":
+            socket.emit("update_time", reply)
+        default:
+            response = "Nothing returned from UDP"
+
+    }
+    return response
 }
