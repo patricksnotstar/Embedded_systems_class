@@ -33,4 +33,7 @@ void AudioMixer_queueSound(wavedata_t *pSound);
 int AudioMixer_getVolume();
 void AudioMixer_setVolume(int newVolume);
 
+int AudioMixer_getBPM();
+void AudioMixer_setBPM(int newBPM);
+
 #endif

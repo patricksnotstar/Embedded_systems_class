@@ -139,19 +139,22 @@ function handleCommand(socket) {
     // });
 }
 
-function processUDPResponse(socket, reply, data) {
+function processUDPResponse(socket, reply) {
     var response;
-    switch (data.action) {
-        case "volume_up":
-            socket.emit("volume_change", reply)
-        case "volume_down":
-            socket.emit("volume_change", reply)
-        case "bpm_up":
-            socket.emit("bpm_up", reply)
-        case "bpm_down":
-            socket.emit("bpm_down", reply)
+
+    var action = reply.split("&")[0];
+    console.log("Action recieved in UDP: ", action);
+    var value = reply.split("&")[1]
+    switch (action) {
+        case "volume":
+            socket.emit("volume_change", value)
+            break;
+        case "bpm":
+            socket.emit("bpm_change", value)
+            break;
         case "uptime":
-            socket.emit("update_time", reply)
+            socket.emit("update_time", value)
+            break;
         default:
             response = "Nothing returned from UDP"
 

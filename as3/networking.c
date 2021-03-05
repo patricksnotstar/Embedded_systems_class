@@ -41,6 +41,7 @@ void Networking_sendPacket(char *messageTx)
 {
     // Transmit a reply:
     unsigned int sin_len = sizeof(client);
+    printf("Sending packet over UDP: %s\n", messageTx);
     sendto(socketDescriptor,
            messageTx, strlen(messageTx),
            0,

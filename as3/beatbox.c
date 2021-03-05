@@ -29,7 +29,9 @@ static void configurePins();
 void *readInput();
 static void processCommand(char *input, char *output);
 static void changeVolume(char *direction);
-void getUptime(char *buff);
+static void getUptime(char *buff);
+static void processJoystickInput(int input);
+static void changeTempo(char *direction);
 
 static pthread_t tid;
 
@@ -97,22 +99,36 @@ static void processCommand(char *input, char *output)
     if (strncmp(input, "volume_up", strlen(input)) == 0)
     {
         changeVolume("up");
-        sprintf(output, "%d", AudioMixer_getVolume());
+        sprintf(output, "volume&%d", AudioMixer_getVolume());
     }
     else if (strncmp(input, "volume_down", strlen(input)) == 0)
     {
         changeVolume("down");
-        sprintf(output, "%d", AudioMixer_getVolume());
+        sprintf(output, "volume&%d", AudioMixer_getVolume());
+    }
+    else if (strncmp(input, "bpm_up", strlen(input)) == 0)
+    {
+        changeTempo("up");
+        sprintf(output, "bpm&%d", AudioMixer_getBPM());
+    }
+    else if (strncmp(input, "bpm_down", strlen(input)) == 0)
+    {
+        changeVolume("down");
+        sprintf(output, "bpm&%d", AudioMixer_getBPM());
+    }
+    else if (strncmp(input, "volume_get", strlen(input)) == 0)
+    {
+        sprintf(output, "volume&%d", AudioMixer_getVolume());
     }
     else if (strncmp(input, "uptime", strlen(input)) == 0)
     {
         char uptime[100];
         getUptime(uptime);
-        sprintf(output, "%s", uptime);
+        sprintf(output, "uptime&%s", uptime);
     }
 }
 
-void getUptime(char *buff)
+static void getUptime(char *buff)
 {
 
     FILE *pFile = fopen(UPTIME, "r");
@@ -130,21 +146,98 @@ void *readInput()
     int jInput = NEUTRAL;
     while (true)
     {
-        pthread_mutex_lock(&jInputMutex);
-        {
-            jInput = GetInput_getJoyStickInput();
-        }
-        pthread_mutex_unlock(&jInputMutex);
+        // pthread_mutex_lock(&jInputMutex);
+        // {
+        jInput = GetInput_getJoyStickInput();
+        // }
+        // pthread_mutex_unlock(&jInputMutex);
         sleep_thread(0, 10000000);
 
         while (jInput != NEUTRAL)
         {
-            pthread_mutex_lock(&jInputMutex);
-            {
-                jInput = GetInput_getJoyStickInput();
-            }
-            pthread_mutex_unlock(&jInputMutex);
+            // pthread_mutex_lock(&jInputMutex);
+            // {
+            // if user holds down for longer than 1 seconds
+            // assume they are doing a repeated command
+            jInput = GetInput_getJoyStickInput();
+            processJoystickInput(jInput);
+            sleep_thread(1, 0);
+
+            // }
+            // pthread_mutex_unlock(&jInputMutex);
         }
+    }
+}
+
+// takes in a string telling it which way to change tempo (up or down)
+static void changeTempo(char *direction)
+{
+    int currentBPM = AudioMixer_getBPM();
+
+    int max = 300;
+    int min = 40;
+
+    if (strncmp(direction, "up", strlen(direction)) == 0)
+    {
+        if (currentBPM < max)
+        {
+            int newBPM = currentBPM + 5;
+            AudioMixer_setBPM(newBPM);
+        }
+    }
+    else if (strncmp(direction, "down", strlen(direction)) == 0)
+    {
+        if (currentBPM > min)
+        {
+            int newBPM = currentBPM - 5;
+            AudioMixer_setBPM(newBPM);
+        }
+    }
+}
+
+static void processJoystickInput(int input)
+{
+    // do we have to memset it to empty everytime?
+
+    char output[MSG_MAX_LEN];
+    memset(output, '\0', sizeof(output));
+    switch (input)
+    {
+    // NEUTRAL
+    case 0:
+        break;
+    // UP
+    case 1:
+        // increase volume
+        changeVolume("up");
+        sprintf(output, "volume&%d", AudioMixer_getVolume());
+        Networking_sendPacket(output);
+        break;
+    // DOWN
+    case 2:
+        // decrease volume
+        changeVolume("down");
+        sprintf(output, "volume&%d", AudioMixer_getVolume());
+        Networking_sendPacket(output);
+        break;
+    // LEFT
+    case 3:
+        // decrease bpm
+        changeTempo("down");
+        sprintf(output, "bpm&%d", AudioMixer_getBPM());
+        Networking_sendPacket(output);
+        break;
+    //RIGHT
+    case 4:
+        // decrease bpm
+        changeTempo("up");
+        sprintf(output, "bpm&%d", AudioMixer_getBPM());
+        Networking_sendPacket(output);
+        break;
+    // CENTER
+    case 5:
+        // cycle through beat type
+        break;
     }
 }
 

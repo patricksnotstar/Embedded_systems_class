@@ -9,6 +9,11 @@ $(document).ready(function () {
     // Make the text-entry box have keyboard focus.
     $('#send-command').focus();
 
+    // get the current volume of the board to display when webpage loads
+    sendMessage("volume_get", null);
+
+    // need to do the same thing for bpm to get the current bpm for when website loads
+    // instead of using cached value from last session
     // // Allow sending the form (pressing enter).
     // $('#send-form').submit(function () {
     //     readUserInput();
@@ -73,8 +78,12 @@ $(document).ready(function () {
 
     socket.on("volume_change", function (result) {
         // update volume value on front end
-        console.log("Volume changing to: ", result);
         $("#volumeId").val(result)
+    });
+
+    socket.on("bpm_change", function (result) {
+        // update bpm value on front end
+        $("#bpmId").val(result)
     });
 
     socket.on("update_time", function (result) {
