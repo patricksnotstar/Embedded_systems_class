@@ -32,9 +32,13 @@ function handleCommand(socket) {
         var PORT = 12345;
         var HOST = '127.0.0.1';
 
-        // need to store different info in buffer for each socket.on function below and then create packet afterwards ?
         var buffer = new Buffer(data.action);
-        // console.log("Buffer created in server: ", buffer);
+
+        // everytime we send a message to C, if we don't get a response within 1 second
+        // emit an error message to let front end know C is offline
+        var connectionTimer = setTimeout(function () {
+            socket.emit("connectionTimeOut");
+        }, 1000);
 
         var client = dgram.createSocket('udp4');
         client.send(buffer, 0, buffer.length, PORT, HOST, function (err, bytes) {
@@ -52,11 +56,11 @@ function handleCommand(socket) {
             console.log("UDP Client: message Rx" + remote.address + ':' + remote.port + ' - ' + message);
 
             var reply = message.toString('utf8')
-
+            // clear timer once we recieve a message
+            clearTimeout(connectionTimer);
+            socket.emit("connectionEstablished")
             processUDPResponse(socket, reply, data)
-            // socket.emit('reply', reply);
 
-            // client.close();
 
         });
 

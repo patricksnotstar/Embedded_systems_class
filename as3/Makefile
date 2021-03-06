@@ -1,6 +1,6 @@
 # Deploy this Node.js project to the public folder
-PROJECT_NAME=as3
-DEPLOY_PATH= $(HOME)/cmpt433/public/$(PROJECT_NAME)-copy
+NODE_PATH = $(HOME)/cmpt433/public/myApps/beatbox-server-copy
+SOUNDS_PATH = $(HOME)/cmpt433/public/myApps/beatbox-wav-files
 OUTFILE = beatbox
 OUTDIR = $(HOME)/cmpt433/public/myApps
 LFLAGS = -L$(HOME)/cmpt433/public/asound_lib_BBB -lasound
@@ -14,16 +14,19 @@ all: deploy node_install beatbox
 deploy:
 	@echo 'COPYING THE NODE.JS FILES TO $(DEPLOY_PATH)'
 	@echo ''
-	mkdir -p $(DEPLOY_PATH)
-	chmod a+rwx $(DEPLOY_PATH)
-	cp -r node/* $(DEPLOY_PATH)
-	@echo 'Do not edit any files in this folder; they are copied!' > $(DEPLOY_PATH)/DO_NOT_EDIT-FILES_COPIED.txt
+	mkdir -p $(NODE_PATH)
+	chmod a+rwx $(NODE_PATH)
+	mkdir -p $(SOUNDS_PATH)
+	chmod a+rwx $(SOUNDS_PATH)
+	cp -r node/* $(NODE_PATH)
+	cp -r sounds/* $(SOUNDS_PATH)
+	@echo 'Do not edit any files in this folder; they are copied!' > $(NODE_PATH)/DO_NOT_EDIT-FILES_COPIED.txt
 	@echo ''
-	@echo 'NOTE: On the host, in $(DEPLOY_PATH), it is best to run: npm install'
+	@echo 'NOTE: On the host, in $(NODE_PATH), it is best to run: npm install'
 	@echo '      Or, just run the node_install target in this makefile.'
 
 node_install:
-	cd $(DEPLOY_PATH) && npm install
+	cd $(NODE_PATH) && npm install
 
 beatbox:
 	$(CC_C) $(CFLAGS) beatbox.c getInput.c networking.c audioMixer.c -o $(OUTDIR)/$(OUTFILE) $(LFLAGS)

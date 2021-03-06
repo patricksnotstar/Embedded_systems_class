@@ -21,6 +21,9 @@
 #define RIGHT_DIR "/sys/class/gpio/gpio47/direction"
 #define MIDDLE_DIR "/sys/class/gpio/gpio27/direction"
 #define UPTIME "/proc/uptime"
+#define HIHAT "beatbox-wav-files/100053__menegass__gui-drum-cc.wav"
+#define BASE "beatbox-wav-files/100051__menegass__gui-drum-bd-hard.wav"
+#define SNARE "beatbox-wav-files/sounds/100059__menegass__gui-drum-snare-soft.wav"
 
 pthread_mutex_t jInputMutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -39,6 +42,7 @@ int main(int argc, char **argv)
 {
     configurePins();
     Networking_configNetwork();
+    AudioMixer_init();
     AudioMixer_setVolume(DEFAULT_VOLUME);
 
     int jInput;
@@ -116,16 +120,25 @@ static void processCommand(char *input, char *output)
         changeTempo("down");
         sprintf(output, "bpm&%d", AudioMixer_getBPM());
     }
+    else if (strncmp(input, "bpm_get", strlen(input)) == 0)
+    {
+        sprintf(output, "bpm&%d", AudioMixer_getBPM());
+    }
     else if (strncmp(input, "volume_get", strlen(input)) == 0)
     {
         sprintf(output, "volume&%d", AudioMixer_getVolume());
     }
     else if (strncmp(input, "hi-hat", strlen(input)) == 0)
     {
-        // sprintf(output, "volume&%d", AudioMixer_getVolume());
+
+        wavedata_t *pSound = malloc(sizeof(wavedata_t));
+        AudioMixer_readWaveFileIntoMemory(HIHAT, pSound);
+        AudioMixer_queueSound(pSound);
+        // AudioMixer_freeWaveFileData(pSound);
     }
     else if (strncmp(input, "snare", strlen(input)) == 0)
     {
+
         // sprintf(output, "volume&%d", AudioMixer_getVolume());
     }
     else if (strncmp(input, "base", strlen(input)) == 0)
@@ -248,9 +261,17 @@ static void configurePins()
 {
     // set pins to be exported
     writeToFile(EXPORT, "26");
+    sleep_thread(0, 33000000);
+
     writeToFile(EXPORT, "46");
+    sleep_thread(0, 33000000);
+
     writeToFile(EXPORT, "65");
+    sleep_thread(0, 33000000);
+
     writeToFile(EXPORT, "47");
+    sleep_thread(0, 33000000);
+
     writeToFile(EXPORT, "27");
 
     // set joystick as input

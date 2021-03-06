@@ -34,13 +34,13 @@ typedef struct
 	// sound has already been played (and hence where to start playing next).
 	int location;
 } playbackSound_t;
-// static playbackSound_t soundBites[MAX_SOUND_BITES];
+static playbackSound_t soundBites[MAX_SOUND_BITES];
 
 // Playback threading
 void *playbackThread(void *arg);
 static _Bool stopping = false;
 static pthread_t playbackThreadId;
-// static pthread_mutex_t audioMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t audioMutex = PTHREAD_MUTEX_INITIALIZER;
 
 static int volume = 0;
 
@@ -54,10 +54,10 @@ void AudioMixer_init(void)
 	// REVISIT:- Implement this. Hint: set the pSound pointer to NULL for each
 	//     sound bite.
 
-	// for (int i = 0; i < MAX_SOUND_BITES; i++)
-	// {
-	// 	soundBites[i].pSound = NULL;
-	// }
+	for (int i = 0; i < MAX_SOUND_BITES; i++)
+	{
+		soundBites[i].pSound = NULL;
+	}
 
 	// Open the PCM output
 	int err = snd_pcm_open(&handle, "default", SND_PCM_STREAM_PLAYBACK, 0);
@@ -163,24 +163,27 @@ void AudioMixer_queueSound(wavedata_t *pSound)
 	 *    not being able to play another wave file.
 	 */
 
-	// bool spotFound = false;
-	// for (int i = 0; i < MAX_SOUND_BITES; i++)
-	// {
-	// 	// need to make access of soundBites threadsafe
-	// 	if (soundBites[i].pSound == NULL)
-	// 	{
-	// 		// copy pointer of pSound into soundBites
-	//		soundBites[i].pSound = pSound;
-	//		soundBites[i].location = 0;
-	// 		spotFound = true;
-	// 		break;
-	// 	}
-	// }
-	// // if we don't find an empty spot after looping through soundBites print error msg
-	// if (spotFound == false)
-	// {
-	// 	printf("Unable to add file to playback buffer, buffer is full.\n");
-	// }
+	bool spotFound = false;
+	for (int i = 0; i < MAX_SOUND_BITES; i++)
+	{
+		pthread_mutex_lock(&audioMutex);
+		{
+			if (soundBites[i].pSound == NULL)
+			{
+				// copy pointer of pSound into soundBites
+				soundBites[i].pSound = pSound;
+				soundBites[i].location = 0;
+				spotFound = true;
+			}
+		}
+		pthread_mutex_unlock(&audioMutex);
+		break;
+	}
+	// if we don't find an empty spot after looping through soundBites print error msg
+	if (spotFound == false)
+	{
+		printf("Unable to add file to playback buffer, buffer is full.\n");
+	}
 }
 
 void AudioMixer_cleanup(void)
@@ -292,7 +295,7 @@ static void fillPlaybackBuffer(short *playbackBuffer, int size)
 	//REVISIT: Implement this
 	//1. Wipe the playbackBuffer to all 0's to clear any previous PCM data.
 	//    Hint: use memset()
-	// memset(playbackBuffer, '\0', playbackBufferSize);
+	memset(playbackBuffer, '\0', playbackBufferSize);
 
 	//  2. Since this is called from a background thread, and soundBites[] array
 	//      may be used by any other thread, must synchronize this.
@@ -306,33 +309,37 @@ static void fillPlaybackBuffer(short *playbackBuffer, int size)
 	//       If you have now played back the entire sample, free the slot in the
 	//         soundBites[] array.
 
-	// int j = 0;
-	// for (int i = 0; i < MAX_SOUND_BITES; i++)
-	// {
-	// 	if (soundBites[i].pSound != NULL)
-	// 	{
-	// 		// need to make access thread safe
-	// 		short value = soundBites[i].pSound->pData;
+	int j = 0;
+	for (int i = 0; i < MAX_SOUND_BITES; i++)
+	{
+		pthread_mutex_lock(&audioMutex);
+		{
+			if (soundBites[i].pSound != NULL)
+			{
+				short *value = soundBites[i].pSound->pData;
 
-	// 		if (value > SHRT_MAX)
-	// 		{
-	// 			value = SHRT_MAX;
-	// 		}
-	// 		else if (value < SHRT_MIN)
-	// 		{
-	// 			value = SHRT_MIN;
-	// 		}
-	// 		playbackBuffer[j] = value;
-	// 		// increment location to show that we have played back some sound
-	// 		soundBites[i].location++;
-	// 		// if the location is greater than the num samples we are done with this sample
-	// 		if (soundBites[i].location > soundBites[i].pSound->numSamples)
-	// 		{
-	// 			soundBites[i].pSound = NULL;
-	// 			soundBites[i].location = 0;
-	// 		}
-	// 	}
-	// }
+				if (*value > SHRT_MAX)
+				{
+					*value = SHRT_MAX;
+				}
+				else if (*value < SHRT_MIN)
+				{
+					*value = SHRT_MIN;
+				}
+				playbackBuffer[j] = *value;
+				j++;
+				// increment location to show that we have played back some sound
+				soundBites[i].location++;
+				// if the location is greater than the num samples we are done with this sample
+				if (soundBites[i].location > soundBites[i].pSound->numSamples)
+				{
+					AudioMixer_freeWaveFileData(soundBites[i].pSound);
+					soundBites[i].location = 0;
+				}
+			}
+			pthread_mutex_unlock(&audioMutex);
+		}
+	}
 	//  * Notes on "adding" PCM samples:
 	//  * - PCM is stored as signed shorts (between SHRT_MIN and SHRT_MAX).
 	//  * - When adding values, ensure there is not an overflow. Any values which would

@@ -8,34 +8,36 @@ var socket = io.connect();
 $(document).ready(function () {
     // Make the text-entry box have keyboard focus.
     $('#send-command').focus();
+    $('#error-C').hide();
+    $('#error-node').hide();
 
-    // get the current volume of the board to display when webpage loads
+
+
+    // get the current volume and bpm of the board to display when webpage loads
     sendMessage("volume_get", null);
+    sendMessage("bpm_get", null);
 
-    // need to do the same thing for bpm to get the current bpm for when website loads
-    // instead of using cached value from last session
-    // // Allow sending the form (pressing enter).
-    // $('#send-form').submit(function () {
-    //     readUserInput();
+    // display error if node js server is not running
+    socket.on('disconnect', function () {
+        $('#error-node').show();
+    })
+    socket.on('connect', function () {
+        $('#error-node').hide();
+    })
 
-    //     // Return false to show we have handleded it.
-    //     return false;
-    // });
-
-    // var errorTimer = setTimeout(function () {
-    //     socket.emit("daError", "Oops: User too slow at sending first command.");
-    // }, 5000);
-
-    // Stop the timer:
-    // clearTimeout(errorTimer);
+    // display error if C code doesnt respond to message
+    socket.on('connectionTimeOut', function () {
+        $('#error-C').show();
+    })
+    // hide error if connection between C and node is fine
+    socket.on('connectionEstablished', function () {
+        $('#error-C').hide();
+    })
 
 
     // Setup a repeating function (every 1s)
     window.setInterval(function () { sendMessage('uptime') }, 1000);
 
-    // Make this the zenCape volume later
-    // $("#volumeId").val(0);
-    // $("#bpmId").val(120);
 
     $('#modeNone').click(function () {
         sendMessage("mode", "None");
@@ -59,13 +61,13 @@ $(document).ready(function () {
         sendMessage("bpm_down", null);
     });
     $('#hi-hat').click(function () {
-        sendMessage("hi-hat", sound);
+        sendMessage("hi-hat", null);
     });
     $('#snare').click(function () {
-        sendMessage("snare", sound);
+        sendMessage("snare", null);
     });
     $('#base').click(function () {
-        sendMessage("base", sound);
+        sendMessage("base", null);
     });
 });
 
@@ -100,44 +102,10 @@ function sendMessage(action, data) {
         action: action,
         data: data
     }
-
     // console.log("Sending message to server: ", message)
     socket.emit("action", message);
 }
 
-// function changeMode(modeType) {
-//     var message = {
-//         mode: modeType,
-//     };
-//     $("#modeid").text(modeType);
-//     socket.emit("changeMode", message);
-//     // console.log('boobs');
-// }
-
-// function adjustVolume(direction, currentVol) {
-//     var message = {
-//         action: direction, //either up or down
-//         currentVol: currentVol
-//     };
-//     socket.emit("changeVolume", message);
-// }
-
-// function adjustBPM(direction, currentBPM) {
-//     var message = {
-//         action: direction, //either up or down
-//         currentBPM: currentBPM
-//     };
-//     socket.emit("changeBPM", message);
-// }
-
-// function playDrums(drumSound) {
-//     var message = {
-//         drum: drumSound, //either hi-hat, snare or base
-//         // currentBPM: currentBPM // not sure if we need to write the BPM so it plays back at the proper speed?
-//     };
-//     $("#drumId").text(drumSound);
-//     socket.emit("playDrums", message);
-// }
 
 function readUserInput() {
     // Get the user's input from the browser.
