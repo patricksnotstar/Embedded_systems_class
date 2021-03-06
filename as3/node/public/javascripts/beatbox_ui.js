@@ -47,58 +47,52 @@ $(document).ready(function () {
         sendMessage("mode", "Describe");
     });
     $('#volumeUp').click(function () {
-        // var currentVol = $("#volumeId").val();
         sendMessage("volume_up", null);
     });
     $('#volumeDown').click(function () {
-        // var currentVol = $("#volumeId").val();
         sendMessage("volume_down", null);
     });
     $('#bpmUp').click(function () {
-        var currentBPM = $("#bpmId").val();
         sendMessage("bpm_up", null);
     });
     $('#bpmDown').click(function () {
-        var currentBPM = $("#bpmId").val();
         sendMessage("bpm_down", null);
     });
-
     $('#hi-hat').click(function () {
-        var sound = $('#hi-hat').val();
-        sendMessage("drums", sound);
+        sendMessage("hi-hat", sound);
     });
     $('#snare').click(function () {
-        var sound = $('#snare').val();
-        sendMessage("drums", sound);
+        sendMessage("snare", sound);
     });
     $('#base').click(function () {
-        var sound = $('#base').val();
-        sendMessage("drums", sound);
+        sendMessage("base", sound);
     });
-
-    socket.on("volume_change", function (result) {
-        // update volume value on front end
-        $("#volumeId").val(result)
-    });
-
-    socket.on("bpm_change", function (result) {
-        // update bpm value on front end
-        $("#bpmId").val(result)
-    });
-
-    socket.on("update_time", function (result) {
-        var time = result.split(' ')[0];
-        // console.log(time);
-        time = new Date(Number(time) * 1000).toISOString().substr(11, 8)
-        $("#statusid").text(time + " (H:M:S)")
-    });
-
-    socket.on('error', function (result) {
-        var msg = divMessage('SERVER ERROR: ' + result);
-        $('#messages').append(msg);
-    });
-
 });
+
+
+
+socket.on("volume_change", function (result) {
+    // update volume value on front end
+    $("#volumeId").val(result)
+});
+
+socket.on("bpm_change", function (result) {
+    // update bpm value on front end
+    $("#bpmId").val(result)
+});
+
+socket.on("update_time", function (result) {
+    var time = result.split(' ')[0];
+    // console.log(time);
+    time = new Date(Number(time) * 1000).toISOString().substr(11, 8)
+    $("#statusid").text(time + " (H:M:S)")
+});
+
+socket.on('error', function (result) {
+    var msg = divMessage('SERVER ERROR: ' + result);
+    $('#messages').append(msg);
+});
+
 
 
 function sendMessage(action, data) {

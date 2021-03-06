@@ -113,12 +113,24 @@ static void processCommand(char *input, char *output)
     }
     else if (strncmp(input, "bpm_down", strlen(input)) == 0)
     {
-        changeVolume("down");
+        changeTempo("down");
         sprintf(output, "bpm&%d", AudioMixer_getBPM());
     }
     else if (strncmp(input, "volume_get", strlen(input)) == 0)
     {
         sprintf(output, "volume&%d", AudioMixer_getVolume());
+    }
+    else if (strncmp(input, "hi-hat", strlen(input)) == 0)
+    {
+        // sprintf(output, "volume&%d", AudioMixer_getVolume());
+    }
+    else if (strncmp(input, "snare", strlen(input)) == 0)
+    {
+        // sprintf(output, "volume&%d", AudioMixer_getVolume());
+    }
+    else if (strncmp(input, "base", strlen(input)) == 0)
+    {
+        // sprintf(output, "volume&%d", AudioMixer_getVolume());
     }
     else if (strncmp(input, "uptime", strlen(input)) == 0)
     {
@@ -146,25 +158,12 @@ void *readInput()
     int jInput = NEUTRAL;
     while (true)
     {
-        // pthread_mutex_lock(&jInputMutex);
-        // {
         jInput = GetInput_getJoyStickInput();
-        // }
-        // pthread_mutex_unlock(&jInputMutex);
+        processJoystickInput(jInput);
         sleep_thread(0, 10000000);
-
         while (jInput != NEUTRAL)
         {
-            // pthread_mutex_lock(&jInputMutex);
-            // {
-            // if user holds down for longer than 1 seconds
-            // assume they are doing a repeated command
             jInput = GetInput_getJoyStickInput();
-            processJoystickInput(jInput);
-            sleep_thread(1, 0);
-
-            // }
-            // pthread_mutex_unlock(&jInputMutex);
         }
     }
 }
@@ -197,45 +196,37 @@ static void changeTempo(char *direction)
 
 static void processJoystickInput(int input)
 {
-    // do we have to memset it to empty everytime?
-
     char output[MSG_MAX_LEN];
     memset(output, '\0', sizeof(output));
     switch (input)
     {
-    // NEUTRAL
-    case 0:
+    case NEUTRAL:
         break;
-    // UP
-    case 1:
+    case AUF:
         // increase volume
         changeVolume("up");
         sprintf(output, "volume&%d", AudioMixer_getVolume());
         Networking_sendPacket(output);
         break;
-    // DOWN
-    case 2:
+    case NIEDER:
         // decrease volume
         changeVolume("down");
         sprintf(output, "volume&%d", AudioMixer_getVolume());
         Networking_sendPacket(output);
         break;
-    // LEFT
-    case 3:
+    case LINKS:
         // decrease bpm
         changeTempo("down");
         sprintf(output, "bpm&%d", AudioMixer_getBPM());
         Networking_sendPacket(output);
         break;
-    //RIGHT
-    case 4:
+    case RECHTS:
         // decrease bpm
         changeTempo("up");
         sprintf(output, "bpm&%d", AudioMixer_getBPM());
         Networking_sendPacket(output);
         break;
-    // CENTER
-    case 5:
+    case CENTER:
         // cycle through beat type
         break;
     }
