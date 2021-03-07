@@ -21,7 +21,7 @@
 #define RIGHT_DIR "/sys/class/gpio/gpio47/direction"
 #define MIDDLE_DIR "/sys/class/gpio/gpio27/direction"
 #define UPTIME "/proc/uptime"
-#define HIHAT "beatbox-wav-files/100053__menegass__gui-drum-cc.wav"
+#define HIHAT "sandstorm.wav"
 #define BASE "beatbox-wav-files/100051__menegass__gui-drum-bd-hard.wav"
 #define SNARE "beatbox-wav-files/sounds/100059__menegass__gui-drum-snare-soft.wav"
 

@@ -287,13 +287,10 @@ void AudioMixer_setVolume(int newVolume)
 //    size: the number of values to store into playbackBuffer
 static void fillPlaybackBuffer(short *playbackBuffer, int size)
 {
-
 	//REVISIT: Implement this
 	//1. Wipe the playbackBuffer to all 0's to clear any previous PCM data.
 	//    Hint: use memset()
-	// memset(playbackBuffer, '\0', size);
-	free(playbackBuffer);
-	playbackBuffer = malloc(size * sizeof(*playbackBuffer));
+	memset(playbackBuffer, '\0', size * sizeof(*playbackBuffer));
 
 	//  2. Since this is called from a background thread, and soundBites[] array
 	//      may be used by any other thread, must synchronize this.
@@ -307,7 +304,6 @@ static void fillPlaybackBuffer(short *playbackBuffer, int size)
 	//       If you have now played back the entire sample, free the slot in the
 	//         soundBites[] array.
 
-	printf("Size of playbackbuffer %d\n", sizeof(playbackBuffer));
 	int j = 0;
 	for (int i = 0; i < MAX_SOUND_BITES; i++)
 	{
@@ -317,25 +313,25 @@ static void fillPlaybackBuffer(short *playbackBuffer, int size)
 			// printf("psound data: %d\n", *soundBites[i].pSound->pData);
 			// printf("psound numSamples: %d\n", soundBites[i].pSound->numSamples);
 
-			short *value = soundBites[i].pSound->pData;
+			short value = soundBites[i].pSound->pData[soundBites[i].location];
 
-			if (*value > SHRT_MAX)
+			if (value > SHRT_MAX)
 			{
-				*value = SHRT_MAX;
+				value = SHRT_MAX;
 			}
-			else if (*value < SHRT_MIN)
+			else if (value < SHRT_MIN)
 			{
-				*value = SHRT_MIN;
+				value = SHRT_MIN;
 			}
-			printf("playback location: %d\n", soundBites[i].location);
+			printf("playback location: %d and value is %d\n", soundBites[i].location, value);
 			if (j < size)
 			{
-				playbackBuffer[j] = *value;
+				playbackBuffer[j] = value;
 				j++;
 			}
 			// increment location to show that we have played back some sound
 			int bpm = AudioMixer_getBPM();
-			float val = ((60.0 / bpm) * (44100 / 2));
+			float val = ((60.0 / bpm) * 44100) / 2;
 
 			soundBites[i].location = soundBites[i].location + val;
 			// printf("playback location after increasing: %d\n", soundBites[i].location);
@@ -344,6 +340,7 @@ static void fillPlaybackBuffer(short *playbackBuffer, int size)
 			if (soundBites[i].location >= soundBites[i].pSound->numSamples)
 			{
 				AudioMixer_freeWaveFileData(soundBites[i].pSound);
+				soundBites[i].pSound = NULL;
 				soundBites[i].location = 0;
 			}
 		}
