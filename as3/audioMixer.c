@@ -20,6 +20,7 @@ static unsigned long playbackBufferSize = 0;
 static short *playbackBuffer = NULL;
 pthread_mutex_t volumeMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t bpmMutex = PTHREAD_MUTEX_INITIALIZER;
+static void sleep_thread(long seconds, long nanoseconds);
 
 // Currently active (waiting to be played) sound bites
 #define MAX_SOUND_BITES 30
@@ -170,14 +171,16 @@ void AudioMixer_queueSound(wavedata_t *pSound)
 		{
 			if (soundBites[i].pSound == NULL)
 			{
+				// printf("Big boobies\n");
 				// copy pointer of pSound into soundBites
 				soundBites[i].pSound = pSound;
 				soundBites[i].location = 0;
 				spotFound = true;
+				pthread_mutex_unlock(&audioMutex);
+				break;
 			}
 		}
 		pthread_mutex_unlock(&audioMutex);
-		break;
 	}
 	// if we don't find an empty spot after looping through soundBites print error msg
 	if (spotFound == false)
@@ -210,8 +213,6 @@ void AudioMixer_cleanup(void)
 
 int AudioMixer_getVolume()
 {
-	// Return the cached volume; good enough unless someone is changing
-	// the volume through other means and the cached value is out of date.
 	int currentVol;
 	pthread_mutex_lock(&volumeMutex);
 	{
@@ -223,8 +224,6 @@ int AudioMixer_getVolume()
 
 int AudioMixer_getBPM()
 {
-	// Return the cached volume; good enough unless someone is changing
-	// the volume through other means and the cached value is out of date.
 	int currentBPM;
 	pthread_mutex_lock(&bpmMutex);
 	{
@@ -236,9 +235,6 @@ int AudioMixer_getBPM()
 
 void AudioMixer_setBPM(int newBPM)
 {
-	// Return the cached volume; good enough unless someone is changing
-	// the volume through other means and the cached value is out of date.
-
 	pthread_mutex_lock(&bpmMutex);
 	{
 		bpm = newBPM;
@@ -295,8 +291,7 @@ static void fillPlaybackBuffer(short *playbackBuffer, int size)
 	//REVISIT: Implement this
 	//1. Wipe the playbackBuffer to all 0's to clear any previous PCM data.
 	//    Hint: use memset()
-	memset(playbackBuffer, '\0', playbackBufferSize);
-
+	memset(playbackBuffer, '\0', size);
 	//  2. Since this is called from a background thread, and soundBites[] array
 	//      may be used by any other thread, must synchronize this.
 	//  3. Loop through each slot in soundBites[], which are sounds that are either
@@ -309,35 +304,45 @@ static void fillPlaybackBuffer(short *playbackBuffer, int size)
 	//       If you have now played back the entire sample, free the slot in the
 	//         soundBites[] array.
 
+	printf("Size of playbackbuffer %d\n", sizeof(playbackBuffer));
 	int j = 0;
 	for (int i = 0; i < MAX_SOUND_BITES; i++)
 	{
-		pthread_mutex_lock(&audioMutex);
-		{
-			if (soundBites[i].pSound != NULL)
-			{
-				short *value = soundBites[i].pSound->pData;
 
-				if (*value > SHRT_MAX)
-				{
-					*value = SHRT_MAX;
-				}
-				else if (*value < SHRT_MIN)
-				{
-					*value = SHRT_MIN;
-				}
+		if (soundBites[i].pSound != NULL)
+		{
+			// printf("psound data: %d\n", *soundBites[i].pSound->pData);
+			// printf("psound numSamples: %d\n", soundBites[i].pSound->numSamples);
+
+			short *value = soundBites[i].pSound->pData;
+
+			if (*value > SHRT_MAX)
+			{
+				*value = SHRT_MAX;
+			}
+			else if (*value < SHRT_MIN)
+			{
+				*value = SHRT_MIN;
+			}
+			printf("playback location: %d\n", soundBites[i].location);
+			if (j < size)
+			{
 				playbackBuffer[j] = *value;
 				j++;
-				// increment location to show that we have played back some sound
-				soundBites[i].location++;
-				// if the location is greater than the num samples we are done with this sample
-				if (soundBites[i].location > soundBites[i].pSound->numSamples)
-				{
-					AudioMixer_freeWaveFileData(soundBites[i].pSound);
-					soundBites[i].location = 0;
-				}
 			}
-			pthread_mutex_unlock(&audioMutex);
+			// increment location to show that we have played back some sound
+			int bpm = AudioMixer_getBPM();
+			float val = ((60.0 / bpm) * (44100 / 2));
+
+			soundBites[i].location = soundBites[i].location + val;
+			// printf("playback location after increasing: %d\n", soundBites[i].location);
+
+			// if the location is greater than the num samples we are done with this sample
+			if (soundBites[i].location >= soundBites[i].pSound->numSamples)
+			{
+				AudioMixer_freeWaveFileData(soundBites[i].pSound);
+				soundBites[i].location = 0;
+			}
 		}
 	}
 	//  * Notes on "adding" PCM samples:
@@ -372,11 +377,21 @@ void *playbackThread(void *arg)
 	while (!stopping)
 	{
 		// Generate next block of audio
-		fillPlaybackBuffer(playbackBuffer, playbackBufferSize);
 
 		// Output the audio
-		snd_pcm_sframes_t frames = snd_pcm_writei(handle,
-												  playbackBuffer, playbackBufferSize);
+		snd_pcm_sframes_t frames;
+		pthread_mutex_lock(&audioMutex);
+		{
+
+			fillPlaybackBuffer(playbackBuffer, playbackBufferSize);
+			frames = snd_pcm_writei(handle,
+									playbackBuffer, playbackBufferSize);
+		}
+		pthread_mutex_unlock(&audioMutex);
+
+		int bpm = AudioMixer_getBPM();
+		long time_to_wait = ((60.0 / bpm) / 2) * 1000000;
+		sleep_thread(0, time_to_wait);
 
 		// Check for (and handle) possible error conditions on output
 		if (frames < 0)
@@ -398,4 +413,10 @@ void *playbackThread(void *arg)
 	}
 
 	return NULL;
+}
+
+static void sleep_thread(long seconds, long nanoseconds)
+{
+	struct timespec reqDelay = {seconds, nanoseconds};
+	nanosleep(&reqDelay, (struct timespec *)NULL);
 }
