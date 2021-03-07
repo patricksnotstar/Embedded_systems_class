@@ -21,7 +21,7 @@
 #define RIGHT_DIR "/sys/class/gpio/gpio47/direction"
 #define MIDDLE_DIR "/sys/class/gpio/gpio27/direction"
 #define UPTIME "/proc/uptime"
-#define HIHAT "sandstorm.wav"
+#define HIHAT "beatbox-wav-files/100053__menegass__gui-drum-cc.wav"
 #define BASE "beatbox-wav-files/100051__menegass__gui-drum-bd-hard.wav"
 #define SNARE "beatbox-wav-files/sounds/100059__menegass__gui-drum-snare-soft.wav"
 
@@ -35,6 +35,8 @@ static void changeVolume(char *direction);
 static void getUptime(char *buff);
 static void processJoystickInput(int input);
 static void changeTempo(char *direction);
+static void queueDrumBeat(char *drumBeat);
+// static void playRockBeat1();
 
 static pthread_t tid;
 
@@ -131,9 +133,7 @@ static void processCommand(char *input, char *output)
     else if (strncmp(input, "hi-hat", strlen(input)) == 0)
     {
 
-        wavedata_t *pSound = malloc(sizeof(wavedata_t));
-        AudioMixer_readWaveFileIntoMemory(HIHAT, pSound);
-        AudioMixer_queueSound(pSound);
+        queueDrumBeat(HIHAT);
         // AudioMixer_freeWaveFileData(pSound);
     }
     else if (strncmp(input, "snare", strlen(input)) == 0)
@@ -151,6 +151,33 @@ static void processCommand(char *input, char *output)
         getUptime(uptime);
         sprintf(output, "uptime&%s", uptime);
     }
+}
+
+// static void playRockBeat1()
+// {
+//     for (int i = 0; i < MAX_SOUND_BITES; i++)
+//     {
+//         if (i % 3 == 0)
+//         {
+//             queueDrumBeat(HIHAT);
+//             continue;
+//         }
+//         if (i % 2 == 0)
+//         {
+//             queueDrumBeat(BASE);
+//         }
+//         else if (i % 2 == 1)
+//         {
+//             queueDrumBeat(SNARE);
+//         }
+//     }
+// }
+
+static void queueDrumBeat(char *drumBeat)
+{
+    wavedata_t *pSound = malloc(sizeof(wavedata_t));
+    AudioMixer_readWaveFileIntoMemory(drumBeat, pSound);
+    AudioMixer_queueSound(pSound);
 }
 
 static void getUptime(char *buff)

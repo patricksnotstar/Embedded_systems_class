@@ -23,7 +23,7 @@ pthread_mutex_t bpmMutex = PTHREAD_MUTEX_INITIALIZER;
 static void sleep_thread(long seconds, long nanoseconds);
 
 // Currently active (waiting to be played) sound bites
-#define MAX_SOUND_BITES 30
+
 typedef struct
 {
 	// A pointer to a previously allocated sound bite (wavedata_t struct).
@@ -285,12 +285,12 @@ void AudioMixer_setVolume(int newVolume)
 // Fill the playbackBuffer array with new PCM values to output.
 //    playbackBuffer: buffer to fill with new PCM data from sound bites.
 //    size: the number of values to store into playbackBuffer
-static void fillPlaybackBuffer(short *playbackBuffer, int size)
+static void fillPlaybackBuffer(int numSample)
 {
 	//REVISIT: Implement this
 	//1. Wipe the playbackBuffer to all 0's to clear any previous PCM data.
 	//    Hint: use memset()
-	memset(playbackBuffer, '\0', size * sizeof(*playbackBuffer));
+	memset(playbackBuffer, '\0', playbackBufferSize * sizeof(*playbackBuffer));
 
 	//  2. Since this is called from a background thread, and soundBites[] array
 	//      may be used by any other thread, must synchronize this.
@@ -303,48 +303,50 @@ static void fillPlaybackBuffer(short *playbackBuffer, int size)
 	//         the location inside the data where play-back currently is.
 	//       If you have now played back the entire sample, free the slot in the
 	//         soundBites[] array.
-
-	int j = 0;
-	for (int i = 0; i < MAX_SOUND_BITES; i++)
+	bool isAllSoundbitesEmpty = false;
+	for (int j = 0; j < numSample && !isAllSoundbitesEmpty; j++)
 	{
-
-		if (soundBites[i].pSound != NULL)
+		short value = 0;
+		isAllSoundbitesEmpty = true;
+		// int bpm = AudioMixer_getBPM();
+		// int val = ((60.0 / bpm) * SAMPLE_RATE) / 2;
+		for (int i = 0; i < MAX_SOUND_BITES; i++)
 		{
-			// printf("psound data: %d\n", *soundBites[i].pSound->pData);
-			// printf("psound numSamples: %d\n", soundBites[i].pSound->numSamples);
-
-			short value = soundBites[i].pSound->pData[soundBites[i].location];
-
-			if (value > SHRT_MAX)
+			if (soundBites[i].pSound != NULL)
 			{
-				value = SHRT_MAX;
-			}
-			else if (value < SHRT_MIN)
-			{
-				value = SHRT_MIN;
-			}
-			printf("playback location: %d and value is %d\n", soundBites[i].location, value);
-			if (j < size)
-			{
-				playbackBuffer[j] = value;
-				j++;
-			}
-			// increment location to show that we have played back some sound
-			int bpm = AudioMixer_getBPM();
-			float val = ((60.0 / bpm) * 44100) / 2;
+				isAllSoundbitesEmpty = false;
+				// printf("psound data: %d\n", *soundBites[i].pSound->pData);
+				// printf("psound numSamples: %d\n", soundBites[i].pSound->numSamples);
 
-			soundBites[i].location = soundBites[i].location + val;
-			// printf("playback location after increasing: %d\n", soundBites[i].location);
+				value += soundBites[i].pSound->pData[soundBites[i].location];
 
-			// if the location is greater than the num samples we are done with this sample
-			if (soundBites[i].location >= soundBites[i].pSound->numSamples)
-			{
-				AudioMixer_freeWaveFileData(soundBites[i].pSound);
-				soundBites[i].pSound = NULL;
-				soundBites[i].location = 0;
+				if (value > SHRT_MAX)
+				{
+					value = SHRT_MAX;
+				}
+				else if (value < SHRT_MIN)
+				{
+					value = SHRT_MIN;
+				}
+				printf("playback location: %d and value is %d\n", soundBites[i].location, value);
+
+				// increment location to show that we have played back some sound
+
+				soundBites[i].location = soundBites[i].location + 1;
+				// printf("playback location after increasing: %d\n", soundBites[i].location);
+
+				// if the location is greater than the num samples we are done with this sample
+				if (soundBites[i].location >= soundBites[i].pSound->numSamples)
+				{
+					AudioMixer_freeWaveFileData(soundBites[i].pSound);
+					soundBites[i].pSound = NULL;
+					soundBites[i].location = 0;
+				}
 			}
 		}
+		playbackBuffer[j] = value;
 	}
+
 	//  * Notes on "adding" PCM samples:
 	//  * - PCM is stored as signed shorts (between SHRT_MIN and SHRT_MAX).
 	//  * - When adding values, ensure there is not an overflow. Any values which would
@@ -376,22 +378,22 @@ void *playbackThread(void *arg)
 
 	while (!stopping)
 	{
-		// Generate next block of audio
+		int bpm = AudioMixer_getBPM();
+		// long time_to_wait = ((60.0 / bpm) / 2) * 1000000;
+		int numSample = ((60.0 / bpm) * SAMPLE_RATE) / 2;
 
 		// Output the audio
 		snd_pcm_sframes_t frames;
 		pthread_mutex_lock(&audioMutex);
 		{
 
-			fillPlaybackBuffer(playbackBuffer, playbackBufferSize);
+			fillPlaybackBuffer(numSample);
 			frames = snd_pcm_writei(handle,
 									playbackBuffer, playbackBufferSize);
 		}
 		pthread_mutex_unlock(&audioMutex);
 
-		int bpm = AudioMixer_getBPM();
-		long time_to_wait = ((60.0 / bpm) / 2) * 1000000;
-		sleep_thread(0, time_to_wait);
+		sleep_thread(0, 0);
 
 		// Check for (and handle) possible error conditions on output
 		if (frames < 0)

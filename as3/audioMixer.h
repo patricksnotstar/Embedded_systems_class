@@ -12,6 +12,7 @@ typedef struct
 } wavedata_t;
 
 #define AUDIOMIXER_MAX_VOLUME 100
+#define MAX_SOUND_BITES 30
 
 // init() must be called before any other functions,
 // cleanup() must be called last to stop playback threads and free memory.
