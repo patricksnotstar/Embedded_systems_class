@@ -291,7 +291,10 @@ static void fillPlaybackBuffer(short *playbackBuffer, int size)
 	//REVISIT: Implement this
 	//1. Wipe the playbackBuffer to all 0's to clear any previous PCM data.
 	//    Hint: use memset()
-	memset(playbackBuffer, '\0', size);
+	// memset(playbackBuffer, '\0', size);
+	free(playbackBuffer);
+	playbackBuffer = malloc(size * sizeof(*playbackBuffer));
+
 	//  2. Since this is called from a background thread, and soundBites[] array
 	//      may be used by any other thread, must synchronize this.
 	//  3. Loop through each slot in soundBites[], which are sounds that are either
