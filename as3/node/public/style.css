@@ -30,7 +30,7 @@ h1, h2 {
 	min-height: 200pt;
 }
 
-#error-box {
+#error-C, #error-node {
 	border: thin black solid;
 	clear: both;
 	background-color: red;

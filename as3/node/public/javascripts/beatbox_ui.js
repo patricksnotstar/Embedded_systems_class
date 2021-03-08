@@ -40,34 +40,37 @@ $(document).ready(function () {
 
 
     $('#modeNone').click(function () {
-        sendMessage("mode", "None");
+        sendMessage("none");
+        $("#modeid").text("None");
     });
     $('#modeRock1').click(function () {
-        sendMessage("mode", "Rock #1");
+        sendMessage("mode1");
+        $("#modeid").text("Rock beat #1");
     });
     $('#modeRock2').click(function () {
-        sendMessage("mode", "Describe");
+        sendMessage("mode2");
+        $("#modeid").text("Lame Rock beat");
     });
     $('#volumeUp').click(function () {
-        sendMessage("volume_up", null);
+        sendMessage("volume_up");
     });
     $('#volumeDown').click(function () {
-        sendMessage("volume_down", null);
+        sendMessage("volume_down");
     });
     $('#bpmUp').click(function () {
-        sendMessage("bpm_up", null);
+        sendMessage("bpm_up");
     });
     $('#bpmDown').click(function () {
-        sendMessage("bpm_down", null);
+        sendMessage("bpm_down");
     });
     $('#hi-hat').click(function () {
-        sendMessage("hi-hat", null);
+        sendMessage("hi-hat");
     });
     $('#snare').click(function () {
-        sendMessage("snare", null);
+        sendMessage("snare");
     });
     $('#base').click(function () {
-        sendMessage("base", null);
+        sendMessage("base");
     });
 });
 
@@ -97,10 +100,9 @@ socket.on('error', function (result) {
 
 
 
-function sendMessage(action, data) {
+function sendMessage(action) {
     var message = {
         action: action,
-        data: data
     }
     // console.log("Sending message to server: ", message)
     socket.emit("action", message);

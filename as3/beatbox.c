@@ -23,7 +23,7 @@
 #define UPTIME "/proc/uptime"
 #define HIHAT "beatbox-wav-files/100053__menegass__gui-drum-cc.wav"
 #define BASE "beatbox-wav-files/100051__menegass__gui-drum-bd-hard.wav"
-#define SNARE "beatbox-wav-files/sounds/100059__menegass__gui-drum-snare-soft.wav"
+#define SNARE "beatbox-wav-files/100059__menegass__gui-drum-snare-soft.wav"
 
 pthread_mutex_t jInputMutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -36,7 +36,8 @@ static void getUptime(char *buff);
 static void processJoystickInput(int input);
 static void changeTempo(char *direction);
 static void queueDrumBeat(char *drumBeat);
-// static void playRockBeat1();
+static void playRockBeat2();
+static void playRockBeat1();
 
 static pthread_t tid;
 
@@ -50,9 +51,6 @@ int main(int argc, char **argv)
     int jInput;
 
     pthread_create(&tid, NULL, &readInput, &jInput);
-
-    // int volume = AudioMixer_getVolume();
-    // AudioMixer_setVolume(newVolume);
 
     while (true)
     {
@@ -132,18 +130,28 @@ static void processCommand(char *input, char *output)
     }
     else if (strncmp(input, "hi-hat", strlen(input)) == 0)
     {
-
+        sprintf(output, "hihat played");
         queueDrumBeat(HIHAT);
-        // AudioMixer_freeWaveFileData(pSound);
     }
     else if (strncmp(input, "snare", strlen(input)) == 0)
     {
-
-        // sprintf(output, "volume&%d", AudioMixer_getVolume());
+        sprintf(output, "snare played");
+        queueDrumBeat(SNARE);
     }
     else if (strncmp(input, "base", strlen(input)) == 0)
     {
-        // sprintf(output, "volume&%d", AudioMixer_getVolume());
+        sprintf(output, "base played");
+        queueDrumBeat(BASE);
+    }
+    else if (strncmp(input, "mode1", strlen(input)) == 0)
+    {
+        sprintf(output, "mode1");
+        playRockBeat1();
+    }
+    else if (strncmp(input, "mode2", strlen(input)) == 0)
+    {
+        sprintf(output, "mode2");
+        playRockBeat2();
     }
     else if (strncmp(input, "uptime", strlen(input)) == 0)
     {
@@ -153,25 +161,48 @@ static void processCommand(char *input, char *output)
     }
 }
 
-// static void playRockBeat1()
-// {
-//     for (int i = 0; i < MAX_SOUND_BITES; i++)
-//     {
-//         if (i % 3 == 0)
-//         {
-//             queueDrumBeat(HIHAT);
-//             continue;
-//         }
-//         if (i % 2 == 0)
-//         {
-//             queueDrumBeat(BASE);
-//         }
-//         else if (i % 2 == 1)
-//         {
-//             queueDrumBeat(SNARE);
-//         }
-//     }
-// }
+static void playRockBeat1()
+{
+    int bpm = AudioMixer_getBPM();
+    long time_to_wait = ((60.0 / bpm) / 2) * 1000000000;
+    for (int i = 0; i <= 1; i++)
+    {
+        queueDrumBeat(HIHAT);
+        queueDrumBeat(BASE);
+        sleep_thread(0, time_to_wait);
+        queueDrumBeat(HIHAT);
+        sleep_thread(0, time_to_wait);
+        queueDrumBeat(HIHAT);
+        queueDrumBeat(SNARE);
+        sleep_thread(0, time_to_wait);
+        queueDrumBeat(HIHAT);
+    }
+}
+
+static void playRockBeat2()
+{
+    int bpm = AudioMixer_getBPM();
+    long time_to_wait = ((60.0 / bpm) / 2) * 1000000000;
+    for (int i = 0; i < MAX_SOUND_BITES; i++)
+    {
+        if (i % 3 == 0)
+        {
+            queueDrumBeat(HIHAT);
+            sleep_thread(0, time_to_wait);
+            continue;
+        }
+        if (i % 2 == 0)
+        {
+            queueDrumBeat(BASE);
+            sleep_thread(0, time_to_wait);
+        }
+        else if (i % 2 == 1)
+        {
+            queueDrumBeat(SNARE);
+            sleep_thread(0, time_to_wait);
+        }
+    }
+}
 
 static void queueDrumBeat(char *drumBeat)
 {
@@ -200,10 +231,11 @@ void *readInput()
     {
         jInput = GetInput_getJoyStickInput();
         processJoystickInput(jInput);
-        sleep_thread(0, 10000000);
         while (jInput != NEUTRAL)
         {
+            sleep_thread(0, 500000000);
             jInput = GetInput_getJoyStickInput();
+            processJoystickInput(jInput);
         }
     }
 }
@@ -316,82 +348,4 @@ static void sleep_thread(long seconds, long nanoseconds)
 {
     struct timespec reqDelay = {seconds, nanoseconds};
     nanosleep(&reqDelay, (struct timespec *)NULL);
-}
-
-int getJoyStickInput()
-{
-    FILE *pUpFile = fopen(UP, "r");
-    if (pUpFile == NULL)
-    {
-        printf("ERROR: Unable to open file (%s) for read\n", UP);
-        exit(-1);
-    }
-    FILE *pDownFile = fopen(DOWN, "r");
-    if (pDownFile == NULL)
-    {
-        printf("ERROR: Unable to open file (%s) for read\n", DOWN);
-        exit(-1);
-    }
-    FILE *pLeftFile = fopen(LEFT, "r");
-    if (pLeftFile == NULL)
-    {
-        printf("ERROR: Unable to open file (%s) for read\n", LEFT);
-        exit(-1);
-    }
-    FILE *pRightFile = fopen(RIGHT, "r");
-    if (pRightFile == NULL)
-    {
-        printf("ERROR: Unable to open file (%s) for read\n", RIGHT);
-        exit(-1);
-    }
-
-    FILE *pMidFile = fopen(MIDDLE, "r");
-    if (pMidFile == NULL)
-    {
-        printf("ERROR: Unable to open file (%s) for read\n", MIDDLE);
-        exit(-1);
-    }
-    // save joystick values
-    char up[2];
-    char down[2];
-    char left[2];
-    char right[2];
-    char mid[2];
-
-    fgets(up, 2, pUpFile);
-    fgets(down, 2, pDownFile);
-    fgets(left, 2, pLeftFile);
-    fgets(right, 2, pRightFile);
-    fgets(mid, 2, pMidFile);
-    // close files
-    fclose(pUpFile);
-    fclose(pDownFile);
-    fclose(pLeftFile);
-    fclose(pRightFile);
-    fclose(pMidFile);
-    // check if any direction is pressed
-    if (up[0] == '0')
-    {
-        return AUF;
-    }
-    else if (down[0] == '0')
-    {
-        return NIEDER;
-    }
-    else if (left[0] == '0')
-    {
-        return LINKS;
-    }
-    else if (right[0] == '0')
-    {
-        return RECHTS;
-    }
-    else if (mid[0] == '0')
-    {
-        return CENTER;
-    }
-    else
-    {
-        return NEUTRAL;
-    }
 }

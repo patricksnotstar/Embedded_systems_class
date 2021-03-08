@@ -71,62 +71,6 @@ function handleCommand(socket) {
     //     // console.log('mode changed to: ' + mode);
     // });
 
-    // socket.on("changeVolume", function (data) {
-
-    //     var vol = Number(data.currentVol);
-
-    //     if (data.action === "up") {
-    //         if (vol < 100) {
-    //             socket.emit("volume", vol + 5);
-    //             // send packet to host and actually increase volume
-
-    //         }
-    //         else {
-    //             socket.emit("volume", vol);
-    //         }
-    //         console.log("increasing volume");
-    //     }
-    //     else {
-    //         if (data.action === "down") {
-    //             if (vol > 0) {
-    //                 socket.emit("volume", vol - 5);
-    //                 // send packet to host and actually decrease volume
-
-    //             }
-    //             else {
-    //                 socket.emit("volume", vol);
-    //             }
-    //         }
-    //     }
-    //     // console.log('mode changed to: ' + mode);
-    // });
-
-    // socket.on("changeBPM", function (data) {
-
-    //     var bpm = Number(data.currentBPM);
-
-    //     if (data.action === "up") {
-    //         if (bpm < 300) {
-    //             socket.emit("BPM", bpm + 5);
-    //         }
-    //         else {
-    //             socket.emit("BPM", bpm);
-    //         }
-    //         console.log("increasing volume");
-    //     }
-    //     else {
-    //         if (data.action === "down") {
-    //             if (bpm > 40) {
-    //                 socket.emit("BPM", bpm - 5);
-    //             }
-    //             else {
-    //                 socket.emit("BPM", bpm);
-    //             }
-    //         }
-    //     }
-    //     // console.log('mode changed to: ' + mode);
-    // });
-
     // socket.on("playDrums", function (data) {
 
     //     // need to hook up to UDP to trigger actual playback
