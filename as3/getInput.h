@@ -7,6 +7,12 @@
 #define LEFT "/sys/class/gpio/gpio65/value"
 #define RIGHT "/sys/class/gpio/gpio47/value"
 #define MIDDLE "/sys/class/gpio/gpio27/value"
+#define EXPORT "/sys/class/gpio/export"
+#define UP_DIR "/sys/class/gpio/gpio26/direction"
+#define DOWN_DIR "/sys/class/gpio/gpio46/direction"
+#define LEFT_DIR "/sys/class/gpio/gpio65/direction"
+#define RIGHT_DIR "/sys/class/gpio/gpio47/direction"
+#define MIDDLE_DIR "/sys/class/gpio/gpio27/direction"
 
 enum joystickDirections
 {
@@ -18,5 +24,5 @@ enum joystickDirections
     CENTER
 }; // Just Up, Down, Left, Right, Center in German. English words are used and since I'm learning German, I used those
 
-int GetInput_getJoyStickInput();
+void GetInput_initJoystick();
 #endif

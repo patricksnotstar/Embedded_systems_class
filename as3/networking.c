@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "networking.h"
+#include "helper.h"
 
 int Networking_configNetwork()
 {

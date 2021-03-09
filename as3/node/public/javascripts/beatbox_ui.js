@@ -11,6 +11,8 @@ $(document).ready(function () {
     $('#error-C').hide();
     $('#error-node').hide();
 
+    $("#modeid").text("Rock beat #1");
+
 
 
     // get the current volume and bpm of the board to display when webpage loads
@@ -49,7 +51,7 @@ $(document).ready(function () {
     });
     $('#modeRock2').click(function () {
         sendMessage("mode2");
-        $("#modeid").text("Lame Rock beat");
+        $("#modeid").text("Kid Who Just Got A Drum Set Beat");
     });
     $('#volumeUp').click(function () {
         sendMessage("volume_up");
@@ -84,6 +86,21 @@ socket.on("volume_change", function (result) {
 socket.on("bpm_change", function (result) {
     // update bpm value on front end
     $("#bpmId").val(result)
+});
+
+socket.on("mode1", function (result) {
+    // update mode value
+    $("#modeid").text("Rock beat #1")
+});
+
+socket.on("mode2", function (result) {
+    // update mode value
+    $("#modeid").text("Kid Who Just Got A Drum Set Beat")
+});
+
+socket.on("none", function (result) {
+    // update mode value
+    $("#modeid").text("None")
 });
 
 socket.on("update_time", function (result) {

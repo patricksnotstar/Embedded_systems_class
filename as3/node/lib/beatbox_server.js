@@ -103,6 +103,15 @@ function processUDPResponse(socket, reply) {
         case "uptime":
             socket.emit("update_time", value)
             break;
+        case "1":
+            socket.emit("mode1");
+            break;
+        case "2":
+            socket.emit("mode2");
+            break;
+        case "0":
+            socket.emit("none");
+            break;
         default:
             response = "Nothing returned from UDP"
 
