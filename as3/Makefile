@@ -29,5 +29,5 @@ node_install:
 	cd $(NODE_PATH) && npm install
 
 beatbox:
-	$(CC_C) $(CFLAGS) beatbox.c getInput.c networking.c audioMixer.c helper.c -o $(OUTDIR)/$(OUTFILE) $(LFLAGS)
+	$(CC_C) $(CFLAGS) beatbox.c getInput.c server.c audioMixer.c helper.c accelerometer.c -o $(OUTDIR)/$(OUTFILE) $(LFLAGS)
 	

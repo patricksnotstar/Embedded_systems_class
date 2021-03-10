@@ -6,7 +6,7 @@
 #include <string.h>
 
 #include "getInput.h"
-#include "networking.h"
+#include "server.h"
 #include "audioMixer.h"
 #include "beatbox.h"
 #include "helper.h"
@@ -21,19 +21,19 @@ void GetInput_initJoystick()
 {
     // set pins to be exported
     Helper_writeToFile(EXPORT, "26");
-    Helper_sleep_thread(0, 33000000);
+    Helper_sleep_thread(0, 50000000);
 
     Helper_writeToFile(EXPORT, "46");
-    Helper_sleep_thread(0, 33000000);
+    Helper_sleep_thread(0, 50000000);
 
     Helper_writeToFile(EXPORT, "65");
-    Helper_sleep_thread(0, 33000000);
+    Helper_sleep_thread(0, 50000000);
 
     Helper_writeToFile(EXPORT, "47");
-    Helper_sleep_thread(0, 33000000);
+    Helper_sleep_thread(0, 50000000);
 
     Helper_writeToFile(EXPORT, "27");
-
+    Helper_sleep_thread(0, 50000000);
     // set joystick as input
     Helper_writeToFile(UP_DIR, "in");
     Helper_writeToFile(DOWN_DIR, "in");
@@ -75,25 +75,25 @@ static void processJoystickInput(int input)
         // increase volume
         Helper_changeVolume("up");
         sprintf(output, "volume&%d", AudioMixer_getVolume());
-        Networking_sendPacket(output);
+        Server_sendPacket(output);
         break;
     case NIEDER:
         // decrease volume
         Helper_changeVolume("down");
         sprintf(output, "volume&%d", AudioMixer_getVolume());
-        Networking_sendPacket(output);
+        Server_sendPacket(output);
         break;
     case LINKS:
         // decrease bpm
         Helper_changeTempo("down");
         sprintf(output, "bpm&%d", AudioMixer_getBPM());
-        Networking_sendPacket(output);
+        Server_sendPacket(output);
         break;
     case RECHTS:
         // decrease bpm
         Helper_changeTempo("up");
         sprintf(output, "bpm&%d", AudioMixer_getBPM());
-        Networking_sendPacket(output);
+        Server_sendPacket(output);
         break;
     case CENTER:
         // cycle through beat type
@@ -103,7 +103,7 @@ static void processJoystickInput(int input)
             sprintf(output, "%d", Beatbox_currentlyPlayingSound);
         }
         pthread_mutex_unlock(&Beatbox_playbackMutex);
-        Networking_sendPacket(output);
+        Server_sendPacket(output);
         break;
     }
 }

@@ -304,7 +304,6 @@ static void fillPlaybackBuffer()
 				// if the location is greater than the num samples we are done with this sample
 				if (loc >= soundBites[i].pSound->numSamples)
 				{
-					AudioMixer_freeWaveFileData(soundBites[i].pSound);
 					soundBites[i].pSound = NULL;
 					break;
 				}

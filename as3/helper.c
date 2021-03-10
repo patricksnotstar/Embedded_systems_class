@@ -17,7 +17,7 @@ void Helper_writeToFile(const char *fileName, const char *value)
     FILE *pFile = fopen(fileName, "w");
     if (pFile == NULL)
     {
-        fprintf(stderr, "Unable to open path for writing\n");
+        fprintf(stderr, "Unable to open path for writing %s\n", fileName);
         exit(-1);
     }
     fprintf(pFile, "%s", value);

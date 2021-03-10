@@ -4,6 +4,7 @@
         "stdlib.h": "c",
         "stdio.h": "c",
         "i2c.h": "c",
-        "pothead.h": "c"
+        "pothead.h": "c",
+        "helper.h": "c"
     }
 }
