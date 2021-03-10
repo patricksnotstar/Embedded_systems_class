@@ -18,14 +18,6 @@ exports.listen = function (server) {
 
 
 function handleCommand(socket) {
-    // var errorTimer = setTimeout(function () {
-    //     socket.emit("daError", "Oops: User too slow at sending first command.");
-    // }, 5000);
-
-    // Stop the timer:
-    // clearTimeout(errorTimer);
-
-
     socket.on("action", function (data) {
         // console.log('action sent from ui: ' + data.action);
         // Info for connecting to the local process via UDP
@@ -65,26 +57,6 @@ function handleCommand(socket) {
         });
 
     });
-    // socket.on("changeMode", function (data) {
-    //     var mode = data.mode;
-
-    //     // console.log('mode changed to: ' + mode);
-    // });
-
-    // socket.on("playDrums", function (data) {
-
-    //     // need to hook up to UDP to trigger actual playback
-
-    //     // console.log('Playing drum sound: ' + data.drum);
-    // });
-
-
-    // client.on("UDP Client: close", function () {
-    //     console.log("closed");
-    // });
-    // client.on("UDP Client: error", function (err) {
-    //     console.log("error: ", err);
-    // });
 }
 
 function processUDPResponse(socket, reply) {

@@ -114,17 +114,17 @@ static void processCommand(char *input, char *output)
     else if (strncmp(input, "hi-hat", strlen(input)) == 0)
     {
         sprintf(output, "hihat played");
-        Beatbox_queueDrumBeat(hihat);
+        AudioMixer_queueSound(hihat);
     }
     else if (strncmp(input, "snare", strlen(input)) == 0)
     {
         sprintf(output, "snare played");
-        Beatbox_queueDrumBeat(snare);
+        AudioMixer_queueSound(snare);
     }
     else if (strncmp(input, "base", strlen(input)) == 0)
     {
         sprintf(output, "base played");
-        Beatbox_queueDrumBeat(base);
+        AudioMixer_queueSound(base);
     }
     else if (strncmp(input, "mode1", strlen(input)) == 0)
     {

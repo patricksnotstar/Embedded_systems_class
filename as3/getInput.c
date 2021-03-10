@@ -21,19 +21,19 @@ void GetInput_initJoystick()
 {
     // set pins to be exported
     Helper_writeToFile(EXPORT, "26");
-    Helper_sleep_thread(0, 50000000);
+    Helper_sleep_thread(0, 400000000);
 
     Helper_writeToFile(EXPORT, "46");
-    Helper_sleep_thread(0, 50000000);
+    Helper_sleep_thread(0, 400000000);
 
     Helper_writeToFile(EXPORT, "65");
-    Helper_sleep_thread(0, 50000000);
+    Helper_sleep_thread(0, 400000000);
 
     Helper_writeToFile(EXPORT, "47");
-    Helper_sleep_thread(0, 50000000);
+    Helper_sleep_thread(0, 400000000);
 
     Helper_writeToFile(EXPORT, "27");
-    Helper_sleep_thread(0, 50000000);
+    Helper_sleep_thread(0, 400000000);
     // set joystick as input
     Helper_writeToFile(UP_DIR, "in");
     Helper_writeToFile(DOWN_DIR, "in");
@@ -42,7 +42,7 @@ void GetInput_initJoystick()
     Helper_writeToFile(RIGHT_DIR, "in");
 
     // sleep for 400ms before attempting to use any of these pins
-    Helper_sleep_thread(0, 40000000);
+    Helper_sleep_thread(0, 400000000);
 
     pthread_create(&tid, NULL, &readInput, NULL);
 }
@@ -56,7 +56,7 @@ void *readInput()
         processJoystickInput(jInput);
         while (jInput != NEUTRAL)
         {
-            Helper_sleep_thread(0, 500000000);
+            Helper_sleep_thread(0, 300000000);
             jInput = GetInput_getJoyStickInput();
             processJoystickInput(jInput);
         }

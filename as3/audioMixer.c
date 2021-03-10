@@ -294,7 +294,6 @@ static void fillPlaybackBuffer()
 				{
 					value = SHRT_MIN;
 				}
-				// printf("playback location: %d and value is %d\n", loc, value);
 
 				// increment location to show that we have played back some sound
 				loc++;

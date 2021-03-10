@@ -1,4 +1,4 @@
-// This module handles getting all inputs from the Zen Cape. Assumes all pins are exported
+// This module handles getting all inputs from the Zen Cape.
 #ifndef _GETINPUT_H_
 #define _GETINPUT_H_
 

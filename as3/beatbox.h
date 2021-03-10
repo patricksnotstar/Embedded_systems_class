@@ -23,6 +23,4 @@ wavedata_t *hihat;
 wavedata_t *snare;
 wavedata_t *base;
 
-void Beatbox_queueDrumBeat(wavedata_t *pSound);
-
 #endif

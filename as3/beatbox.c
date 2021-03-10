@@ -19,7 +19,6 @@
 #define BASE "beatbox-wav-files/100051__menegass__gui-drum-bd-hard.wav"
 #define SNARE "beatbox-wav-files/100059__menegass__gui-drum-snare-soft.wav"
 
-void Beatbox_queueDrumBeat(wavedata_t *pSound);
 static void allocate_Sounds();
 
 static void playRockBeat2();
@@ -90,15 +89,15 @@ static void playRockBeat1()
 {
     int bpm = AudioMixer_getBPM();
     long time_to_wait = ((60.0 / bpm) / 2) * 1000000000;
-    Beatbox_queueDrumBeat(hihat);
-    Beatbox_queueDrumBeat(base);
+    AudioMixer_queueSound(hihat);
+    AudioMixer_queueSound(base);
     Helper_sleep_thread(0, time_to_wait);
-    Beatbox_queueDrumBeat(hihat);
+    AudioMixer_queueSound(hihat);
     Helper_sleep_thread(0, time_to_wait);
-    Beatbox_queueDrumBeat(hihat);
-    Beatbox_queueDrumBeat(snare);
+    AudioMixer_queueSound(hihat);
+    AudioMixer_queueSound(snare);
     Helper_sleep_thread(0, time_to_wait);
-    Beatbox_queueDrumBeat(hihat);
+    AudioMixer_queueSound(hihat);
     Helper_sleep_thread(0, time_to_wait);
 }
 
@@ -110,22 +109,17 @@ static void playRockBeat2()
     int n = rand() % 3;
     if (n == 0)
     {
-        Beatbox_queueDrumBeat(hihat);
+        AudioMixer_queueSound(hihat);
         Helper_sleep_thread(0, time_to_wait);
     }
     else if (n == 1)
     {
-        Beatbox_queueDrumBeat(snare);
+        AudioMixer_queueSound(snare);
         Helper_sleep_thread(0, time_to_wait);
     }
     else
     {
-        Beatbox_queueDrumBeat(base);
+        AudioMixer_queueSound(base);
         Helper_sleep_thread(0, time_to_wait);
     }
-}
-
-void Beatbox_queueDrumBeat(wavedata_t *pSound)
-{
-    AudioMixer_queueSound(pSound);
 }

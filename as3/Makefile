@@ -30,4 +30,9 @@ node_install:
 
 beatbox:
 	$(CC_C) $(CFLAGS) beatbox.c getInput.c server.c audioMixer.c helper.c accelerometer.c -o $(OUTDIR)/$(OUTFILE) $(LFLAGS)
+
+clean:
+	rm $(OUTDIR)/$(OUTFILE)
+	rm -rf $(NODE_PATH)
+	rm -rf $(SOUNDS_PATH)
 	
