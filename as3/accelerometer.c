@@ -10,6 +10,7 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #include "helper.h"
 #include "audioMixer.h"
@@ -31,6 +32,9 @@ int i2cFileDesc;
 wavedata_t *sounds[3];
 int initI2cBus(char *bus, int address);
 void *readG_thread();
+bool accelManager_xMoved();
+bool accelManager_yMoved();
+bool accelManager_zMoved();
 
 enum drums
 {
@@ -59,16 +63,9 @@ void *readG_thread()
     int accelInput;
     while (true)
     {
+        Helper_sleep_thread(0, 10000000);
         accelInput = getAxis();
         processAccelInput(accelInput);
-        Helper_sleep_thread(0, 1000000);
-        int prevAccelInput = accelInput;
-        accelInput = getAxis();
-        while (accelInput == _NEUTRAL_ || prevAccelInput == accelInput)
-        {
-            accelInput = getAxis();
-            Helper_sleep_thread(0, 1000000);
-        }
     }
 }
 
@@ -78,19 +75,24 @@ static void processAccelInput(int accelInput)
     {
     case _HIHAT_:
         AudioMixer_queueSound(hihat);
+        Helper_sleep_thread(0, 300000000);
         break;
     case _SNARE_:
         AudioMixer_queueSound(snare);
+        Helper_sleep_thread(0, 300000000);
         break;
     case _BASE_:
         AudioMixer_queueSound(base);
+        Helper_sleep_thread(0, 300000000);
+        break;
+    default:
         break;
     }
 }
 
 static int getAxis()
 {
-    // float prevReadings[3] = {0, 0, 0};
+    float prevReadings[3] = {0, 0, 0};
     char buff[7];
 
     // read 7 registers of data, 0x00 to 0x06
@@ -108,53 +110,28 @@ static int getAxis()
     currentReadings[1] = y / 1024.0;
     int16_t z = (buff[REG_ZMSB] << 8) | (buff[REG_ZLSB]);
     z >>= 4;
-    currentReadings[2] = (z / 1024.0);
+    currentReadings[2] = (z / 1024.0) - 1;
 
-    int argMaxAccel = 0;
-    // get axis with maximum change for this iteration
-    for (int i = 0; i < 2; i++)
+    if ((abs(currentReadings[0] - prevReadings[0]) >= 1.0))
     {
-        if (currentReadings[i] < currentReadings[i + 1])
-        {
-            argMaxAccel = i + 1;
-        }
+        printf("Acceleration in X-Axis : %f \n", currentReadings[0]);
+        return _HIHAT_;
     }
 
-    if (argMaxAccel == 0 || argMaxAccel == 1)
+    if ((abs(currentReadings[1] - prevReadings[1]) >= 1.0))
     {
-        if ((abs(currentReadings[argMaxAccel]) >= THRESHOLD))
-        {
-            printf("Acceleration in %d-Axis : %f \n", argMaxAccel, currentReadings[argMaxAccel]);
-            Helper_sleep_thread(0, 50000000);
-            return argMaxAccel;
-        }
+        printf("Acceleration in Y-Axis : %f \n", currentReadings[1]);
+        return _SNARE_;
     }
-    else
+    if ((abs(currentReadings[2] - prevReadings[2]) >= 1.0))
     {
-        if ((abs(currentReadings[argMaxAccel]) >= (THRESHOLD + 1)))
-        {
-            printf("Acceleration in %d-Axis : %f \n", argMaxAccel, currentReadings[argMaxAccel]);
-            Helper_sleep_thread(0, 50000000);
-            return argMaxAccel;
-        }
+        printf("Acceleration in Z-Axis : %f \n", currentReadings[2]);
+        return _BASE_;
     }
-    // if ((abs(y_accl - prevReadings[1]) >= threshold) && abs(y_accl) >= 1.0)
-    // {
-    //     printf("Acceleration in Y-Axis : %f \n", y / 1024.0);
-    //     AudioMixer_queueSound(snare);
-    //     Helper_sleep_thread(0, 10000000);
-    // }
-    // if ((abs(z_accl - prevReadings[2]) >= threshold) && abs(z_accl) >= 1.0)
-    // {
-    //     printf("Acceleration in Z-Axis : %f \n", (z / 1024.0) - 1.0);
-    //     AudioMixer_queueSound(base);
-    //     Helper_sleep_thread(0, 10000000);
-    // }
-    // prevReadings[0] = currentReadings[0];
-    // prevReadings[1] = currentReadings[1];
-    // prevReadings[2] = currentReadings[2];
-    // Helper_sleep_thread(0, 1000000);
-    // printf("Neutral\n");
+    prevReadings[0] = currentReadings[0];
+    prevReadings[1] = currentReadings[1];
+    prevReadings[2] = currentReadings[2];
+
     return _NEUTRAL_;
 }
 

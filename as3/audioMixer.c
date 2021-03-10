@@ -279,11 +279,11 @@ static void fillPlaybackBuffer()
 		{
 			for (int j = 0; j < playbackBufferSize; j++)
 			{
-				short value = 0;
+				int value = 0;
 				int loc = soundBites[i].location;
 
 				// add new data to playback buffer index
-				value = playbackBuffer[j] + soundBites[i].pSound->pData[loc];
+				value = (int)playbackBuffer[j] + (int)soundBites[i].pSound->pData[loc];
 
 				// check for overflow and clip if necessary
 				if (value > SHRT_MAX)
@@ -300,7 +300,7 @@ static void fillPlaybackBuffer()
 				loc++;
 				soundBites[i].location = loc;
 
-				playbackBuffer[j] = value;
+				playbackBuffer[j] = (short)value;
 				// if the location is greater than the num samples we are done with this sample
 				if (loc >= soundBites[i].pSound->numSamples)
 				{
