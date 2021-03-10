@@ -108,7 +108,7 @@ static int getAxis()
     currentReadings[1] = y / 1024.0;
     int16_t z = (buff[REG_ZMSB] << 8) | (buff[REG_ZLSB]);
     z >>= 4;
-    currentReadings[2] = (z / 1024.0) - 1;
+    currentReadings[2] = (z / 1024.0);
 
     int argMaxAccel = 0;
     // get axis with maximum change for this iteration
@@ -131,7 +131,7 @@ static int getAxis()
     }
     else
     {
-        if ((abs(currentReadings[argMaxAccel]) >= THRESHOLD - 0.5))
+        if ((abs(currentReadings[argMaxAccel]) >= (THRESHOLD + 1)))
         {
             printf("Acceleration in %d-Axis : %f \n", argMaxAccel, currentReadings[argMaxAccel]);
             Helper_sleep_thread(0, 50000000);
