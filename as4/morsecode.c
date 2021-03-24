@@ -5,6 +5,7 @@
 #include <linux/uaccess.h>
 #include <linux/kfifo.h>
 #include <linux/leds.h>
+#include <linux/ctype.h>
 
 // #error Are we building this file?
 
@@ -13,7 +14,7 @@
 // Why is sus boi so sus??? Because he loves spiderman Nick, he can get into unique positions
 
 //KFIFO
-#define FIFO_SIZE 256 // Must be a power of 2.
+#define FIFO_SIZE 512 // Must be a power of 2.
 static DECLARE_KFIFO(echo_fifo, char, FIFO_SIZE);
 
 // LED
@@ -33,6 +34,7 @@ DEFINE_LED_TRIGGER(led_trigger);
 #define LETTERSPACE 600
 // time between each word
 #define WORDSPACE 1400
+#define NOSLEEP 0
 
 static unsigned short morsecode_codes[] = {
     0xB800, // A 1011 1
@@ -85,15 +87,6 @@ static ssize_t read(struct file *file,
         return -EFAULT;
     }
 
-    // Can use kfifo_get() to pull out a single value to kernel:
-    /*
-	int val;
-	if (!kfifo_get(&echo_fifo, &val)) {
-		// fifo empty.... handle it some how
-	}
-	// now data is in val... do with it what you will.
-	*/
-
     return num_bytes_read; // # bytes actually read.
 }
 
@@ -118,16 +111,6 @@ static unsigned short get_hex(char c)
     // means it is some other special char such as !
     return -1;
 }
-
-/*
-    Hex value = 1000 0000 0000 0000 (E)
-    OR = 1001
-    AND = 0000
-    BIT_MASK = 0x8000 = 1000 0000 0000 0000
-    i = 0
-    maskedbits = 1000 0000 0000 0000
-    shiftedBits = maskedbits >> 15 - i ----> 0000 0000 0000 0001
-*/
 
 // add character to queue and check it was successful
 static int add_to_queue(char c)
@@ -161,7 +144,6 @@ static void handle_hex(unsigned short hex_value)
 {
     int i = 0;
     int ones_in_a_row_counter = 0;
-    unsigned short and_result;
     unsigned short shifted_mask;
     // if its not a space or a letter just skip it
     if (hex_value == -1)
@@ -182,24 +164,18 @@ static void handle_hex(unsigned short hex_value)
     }
     // otherwise it's a letter, meaning we need to flash for each bit
     else
-    { // need to loop through 16 bits of each binary character from left to right
+    {
+        // need to loop through 16 bits of each binary character from left to right
         // and keep track of appearances of 10 (dot) and 1110 (dash)
-        // 10011011011 = Haggai :)
-        // you sus
         // start loop with 1000 0000 0000 0000
+        bool firstFlash = true;
         for (i = 0; i < 16; i++)
         {
-            // shift the 1 in the bit mask to the right by one every iteration
             shifted_mask = MASK >> i;
-            // and the hex value and mask together to see if there is a one in the ith position
-            // the result should only have a 1 in the ith position (not anywhere else)
-            // since a 1 & 0 is 0
-            and_result = hex_value & shifted_mask;
 
-            // need to check if the ith position of the result is a 1
-            // e.g. 0010 0000 0000 0000 << 2 = 1000 0000 0000 0000
-            // so check if it is equal to 0x8000
-            if ((and_result << i) == 0x8000)
+            // AND the hex value and mask together to see if there is a one in the ith position
+            // so check if it is equal to the shifted bit mask
+            if ((hex_value & shifted_mask) == shifted_mask)
             {
                 // means we encountered a 1
                 ones_in_a_row_counter++;
@@ -211,10 +187,30 @@ static void handle_hex(unsigned short hex_value)
                 // that means its a dash
                 if (ones_in_a_row_counter == 3)
                 {
-                    // put a dash into the kfifo
-                    add_to_queue('-');
-                    // turn on LED
-                    flash_led(true, DASH);
+                    if (firstFlash)
+                    {
+                        add_to_queue('-');
+                        flash_led(true, DASH);
+                        flash_led(false, NOSLEEP);
+                        firstFlash = false;
+                    }
+                    else
+                    {
+                        flash_led(false, DOT);
+                        add_to_queue('-');
+                        // turn on LED
+                        flash_led(true, DASH);
+                        flash_led(false, NOSLEEP);
+                    }
+                    // // put a dash into the kfifo
+                    // if (!lastChar || i < 15)
+                    // {
+                    //     flash_led(false, DOT);
+                    // }
+                    // else
+                    // {
+                    //     flash_led(false, NOSLEEP);
+                    // }
                     // reset counter
                     ones_in_a_row_counter = 0;
                 }
@@ -222,22 +218,39 @@ static void handle_hex(unsigned short hex_value)
                 // which is a dot
                 else if (ones_in_a_row_counter == 1)
                 {
-                    // put a dot into the kfifo
-                    add_to_queue('.');
-                    // turn on LED
-                    flash_led(true, DOT);
+                    if (firstFlash)
+                    {
+                        // put a dot into the kfifo
+                        add_to_queue('.');
+                        // turn on LED
+                        flash_led(true, DOT);
+                        flash_led(false, NOSLEEP);
+                        firstFlash = false;
+                    }
+                    else
+                    {
+                        flash_led(false, DOT);
+                        add_to_queue('.');
+                        flash_led(true, DOT);
+                        flash_led(false, NOSLEEP);
+                    }
+                    // // put a dot into the kfifo
+                    // add_to_queue('.');
+                    // // turn on LED
+                    // flash_led(true, DOT);
+                    // if (!lastChar || i < 15)
+                    // {
+                    //     flash_led(false, DOT);
+                    // }
+                    // else
+                    // {
+                    //     flash_led(false, NOSLEEP);
+                    // }
                     // reset counter
                     ones_in_a_row_counter = 0;
                 }
             }
-            // after each dot/dash turn off and sleep for 200ms
-            flash_led(false, DOT);
         }
-
-        // need to sleep for 600ms in between each letter
-        msleep(LETTERSPACE);
-        // add a space to output
-        add_to_queue(' ');
     }
 }
 
@@ -249,7 +262,6 @@ static ssize_t write(struct file *file,
 
     printk(KERN_INFO "morsecode driver: In my_write()\n");
 
-    // Find min character
     for (buff_idx = 0; buff_idx < count; buff_idx++)
     {
         char ch;
@@ -259,14 +271,29 @@ static ssize_t write(struct file *file,
             return -EFAULT;
         }
 
-        // get hex value for character in buffer
-        hexVal = get_hex(ch);
-        // handle hex (flash light if necessary)
-        handle_hex(hexVal);
-    }
-    // add newline to queue at end of message
-    add_to_queue('\n');
+        if (isalpha(ch))
+        {
+            hexVal = get_hex(ch);
+            printk(KERN_INFO "%d\n", hexVal);
 
+            if (hexVal != -1)
+            {
+                handle_hex(hexVal);
+                if (buff_idx < (count - 2))
+                {
+                    // need to sleep for 600ms in between each letter
+                    msleep(LETTERSPACE);
+                    // add a space to output
+                    add_to_queue(' ');
+                }
+            }
+        }
+        // if (buff_idx == (count - 1))
+        // {
+        //     add_to_queue('\n');
+        // }
+    }
+    add_to_queue('\n');
     // increment position
     *ppos += count;
     // Return # bytes actually written.
