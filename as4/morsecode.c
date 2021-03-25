@@ -150,18 +150,6 @@ static void handle_hex(unsigned short hex_value)
     {
         return;
     }
-    // if its a space between words
-    if (hex_value == 0)
-    {
-        // write 3 spaces to the output buffer
-        int i = 0;
-        for (i = 0; i < 3; i++)
-        {
-            add_to_queue(' ');
-        }
-        // turn light off and sleep for 1400ms
-        flash_led(false, WORDSPACE);
-    }
     // otherwise it's a letter, meaning we need to flash for each bit
     else
     {
@@ -202,16 +190,6 @@ static void handle_hex(unsigned short hex_value)
                         flash_led(true, DASH);
                         flash_led(false, NOSLEEP);
                     }
-                    // // put a dash into the kfifo
-                    // if (!lastChar || i < 15)
-                    // {
-                    //     flash_led(false, DOT);
-                    // }
-                    // else
-                    // {
-                    //     flash_led(false, NOSLEEP);
-                    // }
-                    // reset counter
                     ones_in_a_row_counter = 0;
                 }
                 // if ones in a row counter is 1 that means we are seeing 10
@@ -234,19 +212,6 @@ static void handle_hex(unsigned short hex_value)
                         flash_led(true, DOT);
                         flash_led(false, NOSLEEP);
                     }
-                    // // put a dot into the kfifo
-                    // add_to_queue('.');
-                    // // turn on LED
-                    // flash_led(true, DOT);
-                    // if (!lastChar || i < 15)
-                    // {
-                    //     flash_led(false, DOT);
-                    // }
-                    // else
-                    // {
-                    //     flash_led(false, NOSLEEP);
-                    // }
-                    // reset counter
                     ones_in_a_row_counter = 0;
                 }
             }
@@ -259,6 +224,9 @@ static ssize_t write(struct file *file,
 {
     int buff_idx = 0;
     unsigned short hexVal;
+    char prevChar = 0;
+    bool firstWord = true;
+    int i = 0;
 
     printk(KERN_INFO "morsecode driver: In my_write()\n");
 
@@ -273,25 +241,39 @@ static ssize_t write(struct file *file,
 
         if (isalpha(ch))
         {
+            if (firstWord)
+            {
+                firstWord = false;
+            }
+            else
+            {
+                if (prevChar == ' ')
+                {
+                    for (i = 0; i < 3; i++)
+                    {
+                        add_to_queue(' ');
+                    }
+                    msleep(WORDSPACE);
+                }
+            }
             hexVal = get_hex(ch);
-            printk(KERN_INFO "%d\n", hexVal);
-
             if (hexVal != -1)
             {
-                handle_hex(hexVal);
-                if (buff_idx < (count - 2))
+                if (isalpha(prevChar))
                 {
                     // need to sleep for 600ms in between each letter
                     msleep(LETTERSPACE);
                     // add a space to output
                     add_to_queue(' ');
                 }
+                handle_hex(hexVal);
             }
+            prevChar = ch;
         }
-        // if (buff_idx == (count - 1))
-        // {
-        //     add_to_queue('\n');
-        // }
+        else if (ch == ' ')
+        {
+            prevChar = ch;
+        }
     }
     add_to_queue('\n');
     // increment position
